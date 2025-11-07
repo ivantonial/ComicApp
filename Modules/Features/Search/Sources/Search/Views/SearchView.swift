@@ -9,7 +9,7 @@ import CharacterList
 import ComicsList
 import Core
 import DesignSystem
-import MarvelAPI
+import ComicVineAPI
 import SwiftUI
 
 public struct SearchView: View {
@@ -158,7 +158,7 @@ public struct SearchView: View {
                     .foregroundColor(.gray)
                     .font(.system(size: 18))
 
-                TextField("Search Marvel characters...", text: $viewModel.searchText)
+                TextField("Search Comics characters...", text: $viewModel.searchText)
                     .foregroundColor(.white)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
@@ -194,12 +194,11 @@ public struct SearchView: View {
         .background(Color.black)
     }
 
-    // MARK: - Suggestions View (CORRIGIDO COM DISMISS)
+    // MARK: - Suggestions View
     private var suggestionsView: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
-                // Usa enumerated() para ter um índice único ao invés do próprio texto
-                ForEach(Array(viewModel.suggestions.enumerated()), id: \.offset) { index, suggestion in
+                ForEach(Array(viewModel.suggestions.enumerated()), id: \.offset) { _, suggestion in
                     Button(action: {
                         // Dismiss do teclado ao selecionar sugestão
                         isSearchFieldFocused = false
@@ -377,8 +376,8 @@ struct SearchResultCard: View {
 
     var body: some View {
         HStack(spacing: 15) {
-            // Character Image
-            AsyncImage(url: character.thumbnail.secureUrl) { phase in
+            // Character Image (ComicVine)
+            AsyncImage(url: character.image.bestQualityUrl) { phase in
                 switch phase {
                 case .success(let image):
                     image
@@ -402,17 +401,21 @@ struct SearchResultCard: View {
                     .font(.headline)
                     .foregroundColor(.white)
 
-                // CORREÇÃO: description é String não opcional
-                if !character.description.isEmpty {
-                    Text(character.description)
+                if let description = character.description,
+                   !description.isEmpty {
+                    Text(description)
                         .font(.caption)
                         .foregroundColor(.gray)
                         .lineLimit(2)
                 }
 
                 HStack(spacing: 15) {
-                    Label("\(character.comics.available)", systemImage: "book.fill")
-                    Label("\(character.series.available)", systemImage: "tv.fill")
+                    // Total de aparições em HQs (ComicVine)
+                    Label("\(character.countOfIssueAppearances)", systemImage: "book.fill")
+
+                    // Quantidade de volumes/séries ligados ao personagem
+                    let seriesCount = character.volumeCredits?.count ?? 0
+                    Label("\(seriesCount)", systemImage: "tv.fill")
                 }
                 .font(.caption2)
                 .foregroundColor(.red)

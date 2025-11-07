@@ -7,12 +7,12 @@
 
 import CoreData
 import Foundation
-import MarvelAPI
+import ComicVineAPI
 
 public final class CoreDataStack: @unchecked Sendable {
     public static let shared = CoreDataStack()
 
-    private let modelName = "MarvelCache"
+    private let modelName = "ComicVineCache"
 
     lazy var persistentContainer: NSPersistentContainer = {
         let model = createModel()

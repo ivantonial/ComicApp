@@ -7,7 +7,7 @@
 
 import CoreData
 import Foundation
-import MarvelAPI
+import ComicVineAPI
 
 @objc(CDComic)
 public class CDComic: NSManagedObject {
@@ -18,17 +18,20 @@ public class CDComic: NSManagedObject {
     @NSManaged public var characterId: Int32
     @NSManaged public var cachedAt: Date?
 
+    /// Mesma ideia do CDCharacter: por enquanto não reconstruímos um `Comic`
+    /// completo do cache para evitar depender de inits internos de `ComicVineImage`.
     func toComic() -> Comic? {
-        guard let title = title else { return nil }
-        let thumb = MarvelImage(path: thumbnailPath ?? "", extension: "jpg")
-        return Comic(id: Int(id), title: title, description: comicDescription, thumbnail: thumb)
+        return nil
     }
 
     func update(from comic: Comic, characterId: Int) {
         id = Int32(comic.id)
         title = comic.title
         comicDescription = comic.description
-        thumbnailPath = comic.thumbnail.path
+
+        // Guardamos a melhor URL da imagem como string
+        thumbnailPath = comic.image.bestQualityUrl?.absoluteString
+
         self.characterId = Int32(characterId)
         cachedAt = Date()
     }

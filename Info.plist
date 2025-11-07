@@ -2,15 +2,14 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-
-    <key>CFBundleName</key>
-    <string>$(PRODUCT_NAME)</string>
     <key>CFBundleDisplayName</key>
-    <string>MarvelApp</string>
-    <key>CFBundleIdentifier</key>
-    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <string>ComicApp</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleName</key>
+    <string>$(PRODUCT_NAME)</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -18,7 +17,17 @@
     <key>CFBundleVersion</key>
     <string>1</string>
 
-    <!-- Configuração de LaunchScreen -->
+    <!-- Chave da ComicVine vinda do Secrets.xcconfig -->
+    <key>COMIC_VINE_API_KEY</key>
+    <string>$(COMIC_VINE_API_KEY)</string>
+
+    <!-- ATS no padrão (nenhuma exceção necessária para comicvine.gamespot.com) -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <false/>
+    </dict>
+
     <key>UILaunchScreen</key>
     <dict>
         <key>UIColorName</key>
@@ -26,27 +35,5 @@
         <key>UIImageName</key>
         <string></string>
     </dict>
-
-    <!-- Permitir conexões HTTP para a API Marvel -->
-    <key>NSAppTransportSecurity</key>
-    <dict>
-        <key>NSExceptionDomains</key>
-        <dict>
-            <key>gateway.marvel.com</key>
-            <dict>
-                <key>NSExceptionAllowsInsecureHTTPLoads</key>
-                <true/>
-                <key>NSIncludesSubdomains</key>
-                <true/>
-            </dict>
-        </dict>
-    </dict>
-
-    <!-- Chaves da API Marvel -->
-    <key>MARVEL_PUBLIC_KEY</key>
-    <string>$(MARVEL_PUBLIC_KEY)</string>
-    <key>MARVEL_PRIVATE_KEY</key>
-    <string>$(MARVEL_PRIVATE_KEY)</string>
-
 </dict>
 </plist>

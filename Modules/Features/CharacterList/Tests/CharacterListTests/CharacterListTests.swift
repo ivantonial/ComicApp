@@ -1,11 +1,11 @@
 @testable import CharacterList
-@testable import MarvelAPI
+@testable import ComicVineAPI
 import Networking
 import Testing
 import XCTest
 
 // MARK: - Mock Service
-final class MockMarvelService: MarvelServiceProtocol, @unchecked Sendable {
+final class MockComicVineService: ComicVineServiceProtocol, @unchecked Sendable {
     var shouldThrowError = false
     var charactersToReturn: [Character] = []
     var characterToReturn: Character?
@@ -49,7 +49,7 @@ extension Character {
             name: name,
             description: description,
             modified: "2023-01-01T00:00:00-0500",
-            thumbnail: MarvelImage(path: "http://example.com/image", extension: "jpg"),
+            thumbnail: ComicVineImage(path: "http://example.com/image", extension: "jpg"),
             resourceURI: "http://example.com/character/\(id)",
             comics: ComicList(
                 available: comicsAvailable,
@@ -73,7 +73,7 @@ struct CharacterListViewModelTests {
     @MainActor
     func testLoadCharactersSuccess() async {
         // Arrange
-        let mockService = MockMarvelService()
+        let mockService = MockComicVineService()
         mockService.charactersToReturn = [
             Character.fixture(id: 1, name: "Spider-Man"),
             Character.fixture(id: 2, name: "Iron Man")
@@ -97,7 +97,7 @@ struct CharacterListViewModelTests {
     @MainActor
     func testLoadCharactersError() async {
         // Arrange
-        let mockService = MockMarvelService()
+        let mockService = MockComicVineService()
         mockService.shouldThrowError = true
 
         let useCase = FetchCharactersUseCase(service: mockService)
@@ -116,7 +116,7 @@ struct CharacterListViewModelTests {
     @MainActor
     func testFilterCharactersBySearchText() async {
         // Arrange
-        let mockService = MockMarvelService()
+        let mockService = MockComicVineService()
         mockService.charactersToReturn = [
             Character.fixture(id: 1, name: "Spider-Man"),
             Character.fixture(id: 2, name: "Iron Man"),
@@ -140,7 +140,7 @@ struct CharacterListViewModelTests {
     @MainActor
     func testCharacterCardModels() async {
         // Arrange
-        let mockService = MockMarvelService()
+        let mockService = MockComicVineService()
         mockService.charactersToReturn = [
             Character.fixture(id: 1, name: "Spider-Man", comicsAvailable: 150),
             Character.fixture(id: 2, name: "Iron Man", comicsAvailable: 200)
@@ -171,7 +171,7 @@ class CharacterListUITests: XCTestCase {
         app.launch()
 
         // Verificar se a navegação existe
-        XCTAssertTrue(app.navigationBars["Marvel Heroes"].exists)
+        XCTAssertTrue(app.navigationBars["Comics Heroes"].exists)
 
         // Aguardar carregamento dos personagens
         let firstCharacterCard = app.scrollViews.otherElements.buttons.firstMatch

@@ -8,7 +8,7 @@
 import Combine
 import Core
 import Foundation
-import MarvelAPI
+import ComicVineAPI
 import SwiftUI
 
 @MainActor
@@ -57,6 +57,7 @@ public final class FavoritesViewModel: ObservableObject {
     }
 
     // MARK: - Public Methods
+
     public func loadFavorites() {
         isLoading = true
         error = nil
@@ -139,10 +140,11 @@ public final class FavoritesViewModel: ObservableObject {
 
     public func exportFavorites() -> String {
         let list = favoriteCharacters.map { "• \($0.name)" }.joined(separator: "\n")
-        return "My Marvel Favorites:\n\n\(list)"
+        return "My Comics Favorites:\n\n\(list)"
     }
 
     // MARK: - Private Methods
+
     private func setupObservers() {
         NotificationCenter.default.publisher(for: .favoritesDidChange)
             .receive(on: DispatchQueue.main)
@@ -153,11 +155,21 @@ public final class FavoritesViewModel: ObservableObject {
     private func sortCharacters(_ characters: [Character]) -> [Character] {
         switch sortOption {
         case .dateAdded:
+            // Mantém a ordem em que o serviço retornou (assumindo que já é por data adicionada)
             return characters
+
         case .name:
-            return characters.sorted { $0.name < $1.name }
+            // Usa sorted(by:) explicitamente para não conflitar com sorted(using:)
+            return characters.sorted(by: {
+                $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+            })
+
         case .mostComics:
-            return characters.sorted { $0.comics.available > $1.comics.available }
+            // Marvel: character.comics.available
+            // ComicVine: countOfIssueAppearances
+            return characters.sorted(by: {
+                $0.countOfIssueAppearances > $1.countOfIssueAppearances
+            })
         }
     }
 }

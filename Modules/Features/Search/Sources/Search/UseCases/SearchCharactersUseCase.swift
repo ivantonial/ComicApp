@@ -6,13 +6,13 @@
 //
 
 import Foundation
-import MarvelAPI
+import ComicVineAPI
 
 /// Caso de uso responsável por executar buscas de personagens.
 public final class SearchCharactersUseCase: Sendable {
-    private let service: MarvelServiceProtocol
+    private let service: ComicVineServiceProtocol
 
-    public init(service: MarvelServiceProtocol) {
+    public init(service: ComicVineServiceProtocol) {
         self.service = service
     }
 

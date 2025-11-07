@@ -7,56 +7,60 @@
 
 import DesignSystem
 import Foundation
-import MarvelAPI
+import ComicVineAPI
 import SwiftUI
 
 public struct CharacterCardModel: Identifiable, ContentCardConvertible {
     public let id: Int
     public let name: String
-    public let marvelImage: MarvelImage?
+    public let comicVineImage: ComicVineImage?
     public let comicsCount: Int
     public let aspectRatio: CGFloat
 
-    // Aspecto padrão para personagens é quadrado (1:1)
+    // MARK: - Constants
+    // Default aspect ratio for characters is always square
     private static let defaultCharacterAspectRatio: CGFloat = 1.0
 
     public init(
         id: Int,
         name: String,
-        marvelImage: MarvelImage?,
+        comicVineImage: ComicVineImage?,
         comicsCount: Int,
         aspectRatio: CGFloat? = nil
     ) {
         self.id = id
         self.name = name
-        self.marvelImage = marvelImage
+        self.comicVineImage = comicVineImage
         self.comicsCount = comicsCount
-        // Usa o aspect ratio fornecido ou o padrão para personagens
+        // Force square aspect ratio for characters (or use custom if provided)
         self.aspectRatio = aspectRatio ?? Self.defaultCharacterAspectRatio
     }
 
     public init(from character: Character) {
         self.id = character.id
         self.name = character.name
-        self.marvelImage = character.thumbnail
-        self.comicsCount = character.comics.available
-        // Personagens sempre usam o aspect ratio padrão quadrado
+        self.comicVineImage = character.image
+        self.comicsCount = character.countOfIssueAppearances
+        // Characters always use square aspect ratio
         self.aspectRatio = Self.defaultCharacterAspectRatio
     }
 
-    // MARK: - Conversão para ContentCardModel
+    // MARK: - Conversion to ContentCardModel
     public func toContentCardModel() -> ContentCardModel {
-        // Para personagens (aspect ratio próximo de 1.0), usa .fill para preencher
-        let mode: ContentMode = aspectRatio < 0.9 ? .fit : .fill
-
-        return ContentCardModel(
+        // For characters, always use .fill to ensure the image fills the card
+        ContentCardModel(
             id: id,
             title: name,
             subtitle: nil,
-            marvelImage: marvelImage,
+            comicVineImage: comicVineImage,
             aspectRatio: aspectRatio,
-            contentMode: mode,
-            badge: defaultBadge(icon: "book.fill", text: "\(comicsCount) comics")
+            contentMode: .fill,
+            badge: defaultBadge(
+                icon: "book.fill",
+                text: "\(comicsCount) comics",
+                color: .red
+            ),
+            fixedHeight: nil
         )
     }
 }

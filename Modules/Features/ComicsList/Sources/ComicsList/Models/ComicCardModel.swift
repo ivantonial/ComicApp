@@ -5,58 +5,58 @@
 //  Created by Ivan Tonial IP.TV on 10/10/25.
 //
 
+import ComicVineAPI
 import DesignSystem
-import Foundation
-import MarvelAPI
 import SwiftUI
 
-public struct ComicCardModel: Identifiable, ContentCardConvertible {
+public struct ComicCardModel: Identifiable, Sendable {
     public let id: Int
     public let title: String
-    public let description: String?
-    public let marvelImage: MarvelImage?
-    public let aspectRatio: CGFloat
-
-    // Aspecto padrão para comics é portrait (2:3)
-    private static let defaultComicAspectRatio: CGFloat = 0.67  // 2:3 ratio
-
-    public init(
-        id: Int,
-        title: String,
-        description: String?,
-        marvelImage: MarvelImage?,
-        aspectRatio: CGFloat? = nil
-    ) {
-        self.id = id
-        self.title = title
-        self.description = description
-        self.marvelImage = marvelImage
-        // Usa o aspect ratio fornecido ou o padrão para comics
-        self.aspectRatio = aspectRatio ?? Self.defaultComicAspectRatio
-    }
+    public let issueNumber: String?
+    public let imageURL: URL?
+    public let coverDate: String?
 
     public init(from comic: Comic) {
         self.id = comic.id
         self.title = comic.title
-        self.description = comic.description
-        self.marvelImage = comic.thumbnail
-        // Comics sempre usam o aspect ratio padrão portrait
-        self.aspectRatio = Self.defaultComicAspectRatio
+        self.issueNumber = comic.issueNumber
+        self.imageURL = comic.image.bestQualityUrl
+        self.coverDate = comic.coverDate
     }
+}
 
-    // MARK: - Conversão para ContentCardModel
+// MARK: - ContentCardConvertible Conformance
+extension ComicCardModel: ContentCardConvertible {
     public func toContentCardModel() -> ContentCardModel {
-        // Para comics (aspect ratio menor que 0.9), usa .fit para manter proporção
-        let mode: ContentMode = aspectRatio < 0.9 ? .fit : .fill
-
-        return ContentCardModel(
+        ContentCardModel(
             id: id,
             title: title,
-            subtitle: description?.isEmpty == false ? description : nil,
-            marvelImage: marvelImage,
-            aspectRatio: aspectRatio,
-            contentMode: mode,
-            badge: defaultBadge(icon: "book.pages.fill", text: "HQ")
+            subtitle: issueNumber != nil ? "Issue #\(issueNumber!)" : nil,
+            imageURL: imageURL,
+            aspectRatio: 3.0/4.0, //ContentCardModel.AspectRatio(width: 3, height: 4), // portrait
+            badge: coverDate != nil ? ContentCardModel.BadgeModel(
+                icon: "calendar",
+                text: formatDate(coverDate!),
+                color: .blue
+            ) : nil//,
+//            showGradient: true,
+//            contentAlignment: .bottomLeading
         )
+    }
+
+    private func formatDate(_ dateString: String) -> String {
+        // Implementação simplificada - seria melhor com DateFormatter
+        let components = dateString.split(separator: "-")
+        guard components.count >= 2 else { return dateString }
+
+        let months = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+        if let monthIndex = Int(components[1]),
+           monthIndex > 0 && monthIndex <= 12 {
+            return "\(months[monthIndex]) \(components[0])"
+        }
+
+        return dateString
     }
 }

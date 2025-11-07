@@ -7,7 +7,7 @@
 
 import Core
 import DesignSystem
-import MarvelAPI
+import ComicVineAPI
 import SwiftUI
 
 public struct CharacterListView: View {
@@ -35,7 +35,7 @@ public struct CharacterListView: View {
 
                 if viewModel.isLoading && viewModel.characters.isEmpty {
                     Spacer()
-                    LoadingComponent(message: "Carregando heróis...")
+                    LoadingComponent(message: "Loading heroes...")
                     Spacer()
                 } else if let error = viewModel.error, viewModel.characters.isEmpty {
                     Spacer()
@@ -68,7 +68,7 @@ public struct CharacterListView: View {
 
     // MARK: - Header
     private var headerView: some View {
-        Text("Marvel Heroes")
+        Text("Comic Heroes")  // Atualizado para ficar mais genérico
             .font(.system(size: 34, weight: .bold))
             .foregroundColor(.white)
             .frame(maxWidth: .infinity, alignment: .center)
@@ -79,7 +79,10 @@ public struct CharacterListView: View {
     // MARK: - Conteúdo
     private var contentScrollView: some View {
         ScrollView {
-            LazyVGrid(columns: gridColumns(), spacing: 16) {
+            LazyVGrid(
+                columns: gridColumns(),
+                spacing: 16
+            ) {
                 ForEach(viewModel.characterCardModels, id: \.id) { cardModel in
                     let character = viewModel.displayCharacters.first { $0.id == cardModel.id }
 
@@ -121,7 +124,7 @@ public struct CharacterListView: View {
                 .font(.system(size: 18))
 
             if isSearching {
-                TextField("Buscar personagem", text: $viewModel.searchText)
+                TextField("Search character", text: $viewModel.searchText)
                     .foregroundColor(.white)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
@@ -133,7 +136,7 @@ public struct CharacterListView: View {
                     }
                 }
 
-                Button("Cancelar") {
+                Button("Cancel") {
                     withAnimation(.spring()) {
                         isSearching = false
                         viewModel.searchText = ""
@@ -143,7 +146,7 @@ public struct CharacterListView: View {
                 .foregroundColor(.white)
                 .font(.system(size: 14, weight: .medium))
             } else {
-                Text("Buscar")
+                Text("Search")
                     .foregroundColor(.white)
                     .font(.system(size: 16, weight: .medium))
             }
@@ -167,7 +170,10 @@ public struct CharacterListView: View {
     }
 
     private func gridColumns() -> [GridItem] {
-        [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)]
+        [
+            GridItem(.flexible(), spacing: 16, alignment: .top),
+            GridItem(.flexible(), spacing: 16, alignment: .top)
+        ]
     }
 
     private func refreshData() async {

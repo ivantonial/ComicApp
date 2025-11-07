@@ -101,7 +101,7 @@ public final class SettingsViewModel: ObservableObject {
     }
 
     public func shareApp() -> [Any] {
-        let text = "Check out MarvelApp - Your guide to the Marvel Universe!"
+        let text = "Check out ComicsApp - Your guide to the Comics Universe!"
         let url = URL(string: "https://apps.apple.com/app/id123456789")!
         return [text, url]
     }

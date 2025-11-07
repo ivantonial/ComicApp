@@ -5,7 +5,7 @@
 //  Created by Ivan Tonial IP.TV on 09/10/25.
 //
 
-import MarvelAPI
+import ComicVineAPI
 import SwiftUI
 
 public extension FavoritesView {

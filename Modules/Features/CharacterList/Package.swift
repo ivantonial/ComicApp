@@ -17,7 +17,7 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../../Core"),
-        .package(path: "../../MarvelAPI"),
+        .package(path: "../../ComicVineAPI"),
         .package(path: "../../DesignSystem"),
         .package(path: "../../Networking"),
         .package(path: "../../Cache")
@@ -29,7 +29,7 @@ let package = Package(
             name: "CharacterList",
             dependencies: [
                 "Core",
-                "MarvelAPI",
+                "ComicVineAPI",
                 "DesignSystem",
                 "Networking",
                 "Cache"

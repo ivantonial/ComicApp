@@ -8,7 +8,7 @@
 import Core
 import CoreData
 import Foundation
-import MarvelAPI
+import ComicVineAPI
 
 // MARK: - Protocolo
 public protocol PersistenceManagerProtocol: Sendable {

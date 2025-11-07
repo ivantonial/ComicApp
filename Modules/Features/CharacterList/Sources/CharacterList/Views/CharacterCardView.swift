@@ -6,12 +6,10 @@
 //
 
 import DesignSystem
-import MarvelAPI
+import ComicVineAPI
 import SwiftUI
 
 /// View específica para exibir cards de personagens.
-/// Usa o `ContentCardComponent` do DesignSystem, que internamente
-/// renderiza a imagem via `MarvelAsyncImageComponent`.
 public struct CharacterCardView: View {
     let model: CharacterCardModel
     let onTap: (() -> Void)?

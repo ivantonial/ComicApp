@@ -7,7 +7,7 @@
 
 import Core
 import DesignSystem
-import MarvelAPI
+import ComicVineAPI
 import SwiftUI
 
 public struct FavoritesView: View {
@@ -241,7 +241,7 @@ public struct FavoritesView: View {
                 .fontWeight(.bold)
                 .foregroundColor(.white)
 
-            Text("Start adding your favorite Marvel characters")
+            Text("Start adding your favorite Comic characters")
                 .font(.body)
                 .foregroundColor(.gray)
                 .multilineTextAlignment(.center)

@@ -7,7 +7,7 @@
 
 import Core
 import Foundation
-import MarvelAPI
+import ComicVineAPI
 import SwiftUI
 import Combine
 import Networking
@@ -53,16 +53,17 @@ public final class CharacterListViewModel: ObservableObject {
 
     // MARK: - Initialization
     public init(fetchCharactersUseCase: FetchCharactersUseCase,
-                marvelService: MarvelServiceProtocol? = nil) {
+                comicVineService: ComicVineServiceProtocol? = nil) {
         self.fetchCharactersUseCase = fetchCharactersUseCase
 
         // Sempre cria o use case de busca
-        if let service = marvelService {
+        if let service = comicVineService {
             self.searchCharactersUseCase = CharacterListSearchUseCase(service: service)
         } else {
             let networkService = NetworkService()
-            let marvelService = MarvelService(networkService: networkService)
-            self.searchCharactersUseCase = CharacterListSearchUseCase(service: marvelService)
+            let apiKey = Bundle.main.object(forInfoDictionaryKey: "COMIC_VINE_API_KEY") as? String ?? ""
+            let comicVineService = ComicVineAPIService(networkService: networkService, apiKey: apiKey)
+            self.searchCharactersUseCase = CharacterListSearchUseCase(service: comicVineService)
         }
 
         setupSearchDebounce()
@@ -221,11 +222,25 @@ public final class CharacterListViewModel: ObservableObject {
 
             currentOffset += pageSize
             hasMorePages = result.count == pageSize
+
+            #if DEBUG
+            print("✅ Personagens carregados com sucesso: \(result.count) itens")
+            #endif
         } catch {
             // Só define o erro se a task não foi cancelada
             if !Task.isCancelled {
                 self.error = error
-                print("❌ Erro ao carregar personagens: \(error)")
+
+                #if DEBUG
+                print("❌ Erro ao carregar personagens:")
+                if let networkError = error as? NetworkError {
+                    print("   Tipo: \(networkError)")
+                } else if let decodingError = error as? DecodingError {
+                    print("   Erro de decodificação: \(decodingError)")
+                } else {
+                    print("   Erro desconhecido: \(error)")
+                }
+                #endif
 
                 // Se for carregamento inicial e houve erro, limpa a lista
                 if isInitial {

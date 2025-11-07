@@ -7,7 +7,7 @@
 
 import Core
 import DesignSystem
-import MarvelAPI
+import ComicVineAPI
 import SwiftUI
 
 public struct ComicsListView: View {
