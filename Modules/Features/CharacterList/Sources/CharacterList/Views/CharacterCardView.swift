@@ -6,12 +6,10 @@
 //
 
 import DesignSystem
-import MarvelAPI
+import ComicVineAPI
 import SwiftUI
 
 /// View específica para exibir cards de personagens.
-/// Usa o `ContentCardComponent` do DesignSystem, que internamente
-/// renderiza a imagem via `MarvelAsyncImageComponent`.
 public struct CharacterCardView: View {
     let model: CharacterCardModel
     let onTap: (() -> Void)?
@@ -31,3 +29,13 @@ public struct CharacterCardView: View {
         )
     }
 }
+
+//"icon_url": "https://comicvine.gamespot.com/a/uploads/square_avatar/6/68065/7666828-lightninglad05.jpg",
+//"medium_url": "https://comicvine.gamespot.com/a/uploads/scale_medium/6/68065/7666828-lightninglad05.jpg",
+//"screen_url": "https://comicvine.gamespot.com/a/uploads/screen_medium/6/68065/7666828-lightninglad05.jpg",
+//"screen_large_url": "https://comicvine.gamespot.com/a/uploads/screen_kubrick/6/68065/7666828-lightninglad05.jpg",
+//"small_url": "https://comicvine.gamespot.com/a/uploads/scale_small/6/68065/7666828-lightninglad05.jpg",
+//"super_url": "https://comicvine.gamespot.com/a/uploads/scale_large/6/68065/7666828-lightninglad05.jpg",
+//"thumb_url": "https://comicvine.gamespot.com/a/uploads/scale_avatar/6/68065/7666828-lightninglad05.jpg",
+//"tiny_url": "https://comicvine.gamespot.com/a/uploads/square_mini/6/68065/7666828-lightninglad05.jpg",
+//"original_url": "https://comicvine.gamespot.com/a/uploads/original/6/68065/7666828-lightninglad05.jpg",

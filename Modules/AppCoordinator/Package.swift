@@ -17,7 +17,7 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../Core"),
-        .package(path: "../MarvelAPI"),
+        .package(path: "../ComicVineAPI"),
         .package(path: "../Networking"),
         .package(path: "../Features/CharacterList"),
         .package(path: "../Features/CharacterDetail"),
@@ -33,7 +33,7 @@ let package = Package(
             name: "AppCoordinator",
             dependencies: [
                 "Core",
-                "MarvelAPI",
+                "ComicVineAPI",
                 "Networking",
                 "CharacterList",
                 "CharacterDetail",

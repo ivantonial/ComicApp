@@ -6,11 +6,12 @@ import CharacterList
 import ComicsList
 import Core
 import Favorites
-import MarvelAPI
+import ComicVineAPI
 import Networking
 import Search
 import Settings
 import SwiftUI
+import Cache
 
 @MainActor
 public final class AppCoordinator: ObservableObject {
@@ -25,7 +26,9 @@ public final class AppCoordinator: ObservableObject {
 
     // MARK: - Services
     private let networkService: NetworkServiceProtocol
-    private let marvelService: MarvelServiceProtocol
+    private let comicVineService: ComicVineAPIService
+    private let persistenceManager: PersistenceManager
+    private let favoritesService: FavoritesService
 
     // MARK: - View Models (mantém estado entre navegações)
     private var searchViewModel: SearchViewModel?
@@ -34,209 +37,127 @@ public final class AppCoordinator: ObservableObject {
 
     // MARK: - Inicialização
     public init() {
-        // ✅ Ler as chaves diretamente do Info.plist
-        let publicKey = Bundle.main.object(forInfoDictionaryKey: "MARVEL_PUBLIC_KEY") as? String ?? ""
-        let privateKey = Bundle.main.object(forInfoDictionaryKey: "MARVEL_PRIVATE_KEY") as? String ?? ""
+        // Ler a chave da ComicVine API diretamente do Info.plist
+        let apiKey = Bundle.main.object(forInfoDictionaryKey: "COMIC_VINE_API_KEY") as? String ?? ""
 
-        // 🔐 (Opcional) Logar as chaves para debug – remova em produção
         #if DEBUG
-        print("🔑 Marvel Public Key:", publicKey.isEmpty ? "⌛ Vazia" : "✅ Encontrada")
-        print("🔐 Marvel Private Key:", privateKey.isEmpty ? "⌛ Vazia" : "✅ Encontrada")
+        print("🔑 ComicVine API Key:", apiKey.isEmpty ? "⚠️ Vazia" : "✅ Encontrada")
         #endif
 
-        // ⚙️ Configurar Marvel API
-        let config = MarvelAPIConfig(publicKey: publicKey, privateKey: privateKey)
-        MarvelEndpoint.configure(with: config)
+        guard !apiKey.isEmpty else {
+            fatalError("""
+                ❌ COMIC_VINE_API_KEY não encontrada!
+                Verifique se o arquivo Secrets.xcconfig existe e contém sua chave da API.
+                """)
+        }
 
-        // Inicializar serviços de rede e API
+        // Configurar serviços
         self.networkService = NetworkService()
-        self.marvelService = MarvelService(networkService: networkService)
-
-        // Inicializar ViewModels compartilhados
-        initializeViewModels()
+        self.comicVineService = ComicVineAPIService(networkService: networkService, apiKey: apiKey)
+        self.persistenceManager = PersistenceManager()
+        self.favoritesService = FavoritesService(persistenceManager: persistenceManager)
     }
-    
-    // MARK: - Inicialização dos ViewModels
-    private func initializeViewModels() {
-        // Search ViewModel - os use cases agora estão no módulo Search
-        self.searchViewModel = Search.SearchViewModel(
-            marvelService: marvelService  // Passa só o service
+
+    // MARK: - Private Bindings Helpers
+    private var selectedTabBinding: Binding<AppTab> {
+        Binding<AppTab>(
+            get: { self.selectedTab },
+            set: { self.selectedTab = $0 }
         )
-
-        // Favorites ViewModel
-        self.favoritesViewModel = FavoritesViewModel(favoritesService: FavoritesService.shared)
-
-        // Settings ViewModel
-        self.settingsViewModel = SettingsViewModel()
     }
 
-    // MARK: - Main App View
-    @ViewBuilder
+    private var charactersPathBinding: Binding<NavigationPath> {
+        Binding<NavigationPath>(
+            get: { self.charactersPath },
+            set: { self.charactersPath = $0 }
+        )
+    }
+
+    private var searchPathBinding: Binding<NavigationPath> {
+        Binding<NavigationPath>(
+            get: { self.searchPath },
+            set: { self.searchPath = $0 }
+        )
+    }
+
+    private var favoritesPathBinding: Binding<NavigationPath> {
+        Binding<NavigationPath>(
+            get: { self.favoritesPath },
+            set: { self.favoritesPath = $0 }
+        )
+    }
+
+    private var settingsPathBinding: Binding<NavigationPath> {
+        Binding<NavigationPath>(
+            get: { self.settingsPath },
+            set: { self.settingsPath = $0 }
+        )
+    }
+
+    // MARK: - Main View
     public func start() -> some View {
-        TabView(
-            selection: Binding(
-                get: { self.selectedTab },
-                set: { self.selectedTab = $0 }
-            )
-        ) {
+        TabView(selection: selectedTabBinding) {
             // Tab 1: Characters
-            NavigationStack(
-                path: Binding(
-                    get: { self.charactersPath },
-                    set: { self.charactersPath = $0 }
-                )
-            ) {
-                characterListView()
+            NavigationStack(path: charactersPathBinding) {
+                makeCharacterListView()
                     .navigationDestination(for: CharacterDestination.self) { destination in
                         switch destination {
                         case .detail(let character):
-                            self.characterDetailView(character: character)
+                            self.makeCharacterDetailView(character: character)
                         case .comics(let character):
-                            self.comicsListView(character: character)
+                            self.makeComicsListView(for: character)
                         }
                     }
             }
             .tabItem {
-                Label("Heroes", systemImage: "person.3.fill")
+                Label(AppTab.characters.rawValue, systemImage: AppTab.characters.icon)
             }
             .tag(AppTab.characters)
 
             // Tab 2: Search
-            NavigationStack(
-                path: Binding(
-                    get: { self.searchPath },
-                    set: { self.searchPath = $0 }
-                )
-            ) {
-                searchView()
+            NavigationStack(path: searchPathBinding) {
+                makeSearchView()
                     .navigationDestination(for: CharacterDestination.self) { destination in
                         switch destination {
                         case .detail(let character):
-                            self.characterDetailView(character: character)
+                            self.makeCharacterDetailView(character: character)
                         case .comics(let character):
-                            self.comicsListView(character: character)
+                            self.makeComicsListView(for: character)
                         }
                     }
             }
             .tabItem {
-                Label("Search", systemImage: "magnifyingglass")
+                Label(AppTab.search.rawValue, systemImage: AppTab.search.icon)
             }
             .tag(AppTab.search)
 
             // Tab 3: Favorites
-            NavigationStack(
-                path: Binding(
-                    get: { self.favoritesPath },
-                    set: { self.favoritesPath = $0 }
-                )
-            ) {
-                favoritesView()
+            NavigationStack(path: favoritesPathBinding) {
+                makeFavoritesView()
                     .navigationDestination(for: CharacterDestination.self) { destination in
                         switch destination {
                         case .detail(let character):
-                            self.characterDetailView(character: character)
+                            self.makeCharacterDetailView(character: character)
                         case .comics(let character):
-                            self.comicsListView(character: character)
+                            self.makeComicsListView(for: character)
                         }
                     }
             }
             .tabItem {
-                Label("Favorites", systemImage: "heart.fill")
+                Label(AppTab.favorites.rawValue, systemImage: AppTab.favorites.icon)
             }
             .tag(AppTab.favorites)
 
             // Tab 4: Settings
-            NavigationStack(
-                path: Binding(
-                    get: { self.settingsPath },
-                    set: { self.settingsPath = $0 }
-                )
-            ) {
-                settingsView()
+            NavigationStack(path: settingsPathBinding) {
+                makeSettingsView()
             }
             .tabItem {
-                Label("Settings", systemImage: "gearshape.fill")
+                Label(AppTab.settings.rawValue, systemImage: AppTab.settings.icon)
             }
             .tag(AppTab.settings)
         }
-        .tint(.red) // Cor de destaque da TabBar
-    }
-
-    // MARK: - View Builders
-    @ViewBuilder
-    private func characterListView() -> some View {
-        let fetchUseCase = FetchCharactersUseCase(service: marvelService)
-        let viewModel = CharacterListViewModel(
-                    fetchCharactersUseCase: fetchUseCase,
-                    marvelService: marvelService
-                )
-
-        CharacterListView(viewModel: viewModel) { character in
-            self.navigateToCharacter(character, in: .characters)
-        }
-    }
-
-    @ViewBuilder
-    private func searchView() -> some View {
-        if let viewModel = searchViewModel {
-            SearchView(
-                viewModel: viewModel,
-                onCharacterSelected: { character in
-                    self.navigateToCharacter(character, in: .search)
-                },
-                onComicSelected: { comic in
-                    // Implementar navegação para detalhes do quadrinho se necessário
-                    print("Comic selecionado: \(comic.title)")
-                }
-            )
-        }
-    }
-
-    @ViewBuilder
-    private func favoritesView() -> some View {
-        if let viewModel = favoritesViewModel {
-            FavoritesView(viewModel: viewModel) { character in
-                self.navigateToCharacter(character, in: .favorites)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func settingsView() -> some View {
-        if let viewModel = settingsViewModel {
-            SettingsView(viewModel: viewModel)
-        }
-    }
-
-    @ViewBuilder
-    private func characterDetailView(character: Character) -> some View {
-        let fetchDetailUseCase = FetchCharacterDetailUseCase(service: marvelService)
-        let fetchComicsUseCase = FetchCharacterComicsUseCase(service: marvelService)
-
-        let viewModel = CharacterDetailViewModel(
-            character: character,
-            fetchCharacterDetailUseCase: fetchDetailUseCase,
-            fetchCharacterComicsUseCase: fetchComicsUseCase,
-            favoritesService: nil  // Pode adicionar FavoritesService mais tarde
-        )
-
-        CharacterDetailView(
-            viewModel: viewModel,
-            onComicsSelected: {
-                self.navigateToComics(for: character)
-            }
-        )
-    }
-
-    @ViewBuilder
-    private func comicsListView(character: Character) -> some View {
-        let fetchComicsUseCase = FetchCharacterComicsUseCase(service: marvelService)
-        let viewModel = ComicsListViewModel(
-            character: character,
-            fetchCharacterComicsUseCase: fetchComicsUseCase
-        )
-
-        ComicsListView(viewModel: viewModel)
+        .tint(.red)
     }
 
     // MARK: - Navigation Methods
@@ -301,13 +222,109 @@ public final class AppCoordinator: ObservableObject {
             settingsPath.removeLast(settingsPath.count)
         }
     }
+
+    // MARK: - Factory Methods
+    public func makeCharacterListView() -> some View {
+        let fetchUseCase = FetchCharactersUseCase(service: comicVineService)
+        let viewModel = CharacterListViewModel(
+            fetchCharactersUseCase: fetchUseCase,
+            comicVineService: comicVineService
+        )
+
+        // ✅ Adiciona callback para navegação ao clicar em um personagem
+        return CharacterListView(
+            viewModel: viewModel,
+            onCharacterSelected: { character in
+                self.navigateToCharacter(character, in: .characters)
+            }
+        )
+    }
+
+    public func makeSearchView() -> some View {
+        if searchViewModel == nil {
+            searchViewModel = SearchViewModel(comicVineService: comicVineService)
+        }
+
+        // ✅ Adiciona callbacks para navegação
+        return SearchView(
+            viewModel: searchViewModel!,
+            onCharacterSelected: { character in
+                self.navigateToCharacter(character, in: .search)
+            },
+            onComicSelected: { comic in
+                // TODO: Implementar navegação para detalhes do quadrinho quando a tela existir
+                print("Comic selecionado: \(comic.title)")
+            }
+        )
+    }
+
+    public func makeCharacterDetailView(character: Character) -> some View {
+        let fetchCharacterDetailUseCase = FetchCharacterDetailUseCase(service: comicVineService)
+        let fetchCharacterComicsUseCase = FetchCharacterComicsUseCase(service: comicVineService)
+        let viewModel = CharacterDetailViewModel(
+            character: character,
+            fetchCharacterDetailUseCase: fetchCharacterDetailUseCase,
+            fetchCharacterComicsUseCase: fetchCharacterComicsUseCase,
+            favoritesService: favoritesService
+        )
+
+        // ✅ Adiciona callback para navegação aos quadrinhos
+        return CharacterDetailView(
+            viewModel: viewModel,
+            onComicsSelected: {
+                self.navigateToComics(for: character)
+            }
+        )
+    }
+
+    public func makeFavoritesView() -> some View {
+        if favoritesViewModel == nil {
+            favoritesViewModel = FavoritesViewModel(
+                favoritesService: favoritesService
+            )
+        }
+
+        // ✅ Adiciona callback para navegação ao clicar em um favorito
+        return FavoritesView(
+            viewModel: favoritesViewModel!,
+            onCharacterSelected: { character in
+                self.navigateToCharacter(character, in: .favorites)
+            }
+        )
+    }
+
+    public func makeSettingsView() -> some View {
+        if settingsViewModel == nil {
+            settingsViewModel = SettingsViewModel()
+        }
+
+        return SettingsView(viewModel: settingsViewModel!)
+    }
+
+    public func makeComicsListView(for character: Character) -> some View {
+        let fetchCharacterComicsUseCase = FetchCharacterComicsUseCase(service: comicVineService)
+        let viewModel = ComicsListViewModel(
+            character: character,
+            fetchCharacterComicsUseCase: fetchCharacterComicsUseCase
+        )
+
+        return ComicsListView(viewModel: viewModel)
+    }
 }
 
-// MARK: - App Tabs Enum
+// MARK: - App Tabs
 public enum AppTab: String, CaseIterable {
-    case characters = "Heroes"
+    case characters = "Characters"
     case search = "Search"
     case favorites = "Favorites"
     case settings = "Settings"
-}
 
+    public var icon: String {
+        switch self {
+        case .characters: return "person.3.fill"
+        case .search: return "magnifyingglass"
+        case .favorites: return "star.fill"
+        case .settings: return "gearshape.fill"
+        }
+    }
+}

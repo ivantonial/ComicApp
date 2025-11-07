@@ -5,7 +5,7 @@
 //  Created by Ivan Tonial IP.TV on 13/10/25.
 //
 
-import MarvelAPI
+import ComicVineAPI
 import SwiftUI
 
 // MARK: - Card Configuration Model
@@ -14,10 +14,11 @@ public struct ContentCardModel: Identifiable {
     public let title: String
     public let subtitle: String?
     public let imageURL: URL?
-    public let marvelImage: MarvelImage?
+    public let comicVineImage: ComicVineImage?
     public let aspectRatio: CGFloat
     public let contentMode: ContentMode
     public let badge: BadgeModel?
+    public let fixedHeight: CGFloat? // Nova propriedade para altura fixa
 
     public struct BadgeModel {
         public let icon: String
@@ -39,35 +40,39 @@ public struct ContentCardModel: Identifiable {
         imageURL: URL?,
         aspectRatio: CGFloat = 1.0,
         contentMode: ContentMode = .fill,
-        badge: BadgeModel? = nil
+        badge: BadgeModel? = nil,
+        fixedHeight: CGFloat? = nil
     ) {
         self.id = id
         self.title = title
         self.subtitle = subtitle
         self.imageURL = imageURL
-        self.marvelImage = nil
+        self.comicVineImage = nil
         self.aspectRatio = aspectRatio
         self.contentMode = contentMode
         self.badge = badge
+        self.fixedHeight = fixedHeight
     }
 
     public init(
         id: Int,
         title: String,
         subtitle: String? = nil,
-        marvelImage: MarvelImage?,
+        comicVineImage: ComicVineImage?,
         aspectRatio: CGFloat = 1.0,
         contentMode: ContentMode = .fill,
-        badge: BadgeModel? = nil
+        badge: BadgeModel? = nil,
+        fixedHeight: CGFloat? = nil
     ) {
         self.id = id
         self.title = title
         self.subtitle = subtitle
         self.imageURL = nil
-        self.marvelImage = marvelImage
+        self.comicVineImage = comicVineImage
         self.aspectRatio = aspectRatio
         self.contentMode = contentMode
         self.badge = badge
+        self.fixedHeight = fixedHeight
     }
 }
 
@@ -77,7 +82,7 @@ public struct ContentCardComponent: View {
     private let onTap: (() -> Void)?
 
     @State private var isPressed = false
-    @State private var retryCount = 0  // Para forçar reload das imagens
+    @State private var retryCount = 0
 
     public init(model: ContentCardModel, onTap: (() -> Void)? = nil) {
         self.model = model
@@ -88,12 +93,14 @@ public struct ContentCardComponent: View {
         VStack(spacing: 0) {
             // Container da imagem com proporção fixa
             imageContainer
-                .aspectRatio(model.aspectRatio, contentMode: .fit)
+                .aspectRatio(model.aspectRatio, contentMode: .fill)
                 .clipped()
                 .cornerRadius(12, corners: [.topLeft, .topRight])
 
             cardInfo
         }
+        .frame(height: model.fixedHeight) // Aplica altura fixa se especificada
+        .frame(maxWidth: .infinity)
         .background(Color.black)
         .cornerRadius(12)
         .overlay(
@@ -113,55 +120,56 @@ public struct ContentCardComponent: View {
     // MARK: - Image Container
     @ViewBuilder
     private var imageContainer: some View {
-        ZStack {
-            // Background sempre presente para manter proporção
-            placeholderBackground
+        GeometryReader { geometry in
+            ZStack {
+                // Background sempre presente para manter proporção
+                placeholderBackground
 
-            // Conteúdo da imagem
-            if let marvelImage = model.marvelImage {
-                MarvelAsyncImageComponent(
-                    marvelImage: marvelImage,
-                    context: determineImageContext(),
-                    contentMode: model.contentMode,
-                    cornerRadius: 0
-                )
-            } else if let imageURL = model.imageURL {
-                AsyncImage(url: imageURL) { phase in
-                    switch phase {
-                    case .empty:
-                        loadingView
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: model.contentMode)
-                    case .failure:
-                        errorViewWithRetry
-                    @unknown default:
-                        errorView
+                // Conteúdo da imagem
+                if let comicVineImage = model.comicVineImage {
+                    ComicVineAsyncImageComponent(
+                        comicVineImage: comicVineImage,
+                        context: determineImageContext(),
+                        contentMode: model.contentMode,
+                        cornerRadius: 0,
+                        fixedSize: geometry.size // Passa o tamanho fixo
+                    )
+                } else if let imageURL = model.imageURL {
+                    AsyncImage(url: imageURL) { phase in
+                        switch phase {
+                        case .empty:
+                            loadingView
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: model.contentMode)
+                                .frame(width: geometry.size.width, height: geometry.size.height)
+                                .clipped()
+                        case .failure:
+                            errorViewWithRetry
+                        @unknown default:
+                            errorView
+                        }
                     }
+                    .id(retryCount)
+                } else {
+                    errorView
                 }
-                .id(retryCount)
-            } else {
-                // No image available
-                errorView
             }
         }
     }
 
     // MARK: - Context Detection
     private func determineImageContext() -> ImageContext {
-        // Detecta o tipo de card baseado no aspect ratio
         switch model.aspectRatio {
         case 0.6...0.8:  // Portrait (comics) - ~0.67
-            // Retorna contexto de card portrait
             return .cardMedium
         case 0.9...1.1:  // Square (characters) - 1.0
-            // Retorna contexto de card quadrado
             return .cardSquareMedium
         case 1.5...2.0:  // Landscape
             return .heroImage
         default:
-            return .cardMedium
+            return .cardSquareMedium
         }
     }
 
@@ -239,19 +247,17 @@ public struct ContentCardComponent: View {
     }
 
     private var placeholderIcon: String {
-        // Choose icon based on aspect ratio
         switch model.aspectRatio {
-        case 0.6...0.8: return "book.closed.fill"  // Comics (portrait ~0.67)
-        case 0.9...1.1: return "person.crop.square.fill"  // Characters (square 1.0)
+        case 0.6...0.8: return "book.closed.fill"
+        case 0.9...1.1: return "person.crop.square.fill"
         default: return "photo"
         }
     }
 
     private var placeholderIconSize: CGFloat {
-        // Adjust icon size based on aspect ratio
         switch model.aspectRatio {
-        case 0.6...0.8: return 40  // Taller cards (comics)
-        case 0.9...1.1: return 36  // Square cards (characters)
+        case 0.6...0.8: return 40
+        case 0.9...1.1: return 36
         default: return 32
         }
     }
@@ -264,6 +270,7 @@ public struct ContentCardComponent: View {
                 .foregroundColor(.white)
                 .lineLimit(2)
                 .minimumScaleFactor(0.9)
+                .fixedSize(horizontal: false, vertical: true)
 
             if let subtitle = model.subtitle, !subtitle.isEmpty {
                 Text(subtitle)
@@ -286,6 +293,7 @@ public struct ContentCardComponent: View {
                 .cornerRadius(4)
             }
 
+            // Caso tenha subtitle E badge
             if model.badge != nil && model.subtitle != nil {
                 HStack(spacing: 4) {
                     Image(systemName: model.badge!.icon)
@@ -303,7 +311,7 @@ public struct ContentCardComponent: View {
             }
         }
         .padding(10)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 60, alignment: .leading) // Altura mínima para a info
         .background(
             LinearGradient(
                 colors: [

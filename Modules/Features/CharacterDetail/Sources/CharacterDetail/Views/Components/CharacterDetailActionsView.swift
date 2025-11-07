@@ -27,7 +27,7 @@ struct CharacterDetailActionsView: View {
                 Link(destination: wikiURL) {
                     HStack {
                         Image(systemName: "globe")
-                        Text("View on Marvel Wiki")
+                        Text("View on ComicVine Wiki")
                     }
                     .font(.headline)
                     .foregroundColor(.white)

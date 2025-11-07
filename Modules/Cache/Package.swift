@@ -17,7 +17,7 @@ let package = Package(
     ],
     dependencies: [
         .package(name: "Core", path: "../Core"),
-        .package(name: "MarvelAPI", path: "../MarvelAPI")
+        .package(name: "ComicVineAPI", path: "../ComicVineAPI")
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -26,7 +26,7 @@ let package = Package(
             name: "Cache",
             dependencies: [
                 "Core",
-                "MarvelAPI"
+                "ComicVineAPI"
             ]
         ),
         .testTarget(

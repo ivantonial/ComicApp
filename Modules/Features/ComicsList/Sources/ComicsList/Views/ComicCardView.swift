@@ -6,7 +6,7 @@
 //
 
 import DesignSystem
-import MarvelAPI
+import ComicVineAPI
 import SwiftUI
 
 public struct ComicCardView: View {

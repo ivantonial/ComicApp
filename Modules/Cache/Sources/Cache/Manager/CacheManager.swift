@@ -7,7 +7,7 @@
 
 import Core
 import Foundation
-import MarvelAPI
+import ComicVineAPI
 import UIKit
 
 public final class CacheManager: CacheManagerProtocol, @unchecked Sendable {
@@ -19,11 +19,11 @@ public final class CacheManager: CacheManagerProtocol, @unchecked Sendable {
     private let decoder = JSONDecoder()
     private let maxMemoryCost = 50 * 1024 * 1024 // 50 MB
     private let defaultExpiration: TimeInterval = 3600 // 1h
-    private let queue = DispatchQueue(label: "com.marvel.cache", attributes: .concurrent)
+    private let queue = DispatchQueue(label: "com.comicvine.cache", attributes: .concurrent)
 
     private init() {
         let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
-        diskCacheURL = caches.appendingPathComponent("MarvelCache")
+        diskCacheURL = caches.appendingPathComponent("ComicVineCache")
         try? FileManager.default.createDirectory(at: diskCacheURL, withIntermediateDirectories: true)
         memoryCache.totalCostLimit = maxMemoryCost
         setupObservers()

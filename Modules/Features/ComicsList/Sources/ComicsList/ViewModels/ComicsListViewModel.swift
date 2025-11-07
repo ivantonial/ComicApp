@@ -7,7 +7,7 @@
 
 import Core
 import Foundation
-import MarvelAPI
+import ComicVineAPI
 import SwiftUI
 
 @MainActor
@@ -53,7 +53,7 @@ public final class ComicsListViewModel: ObservableObject {
     }
 
     public var totalComics: Int {
-        character.comics.available
+        character.comicsCount
     }
 
     public var hasFilters: Bool {

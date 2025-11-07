@@ -7,7 +7,7 @@
 
 import CoreData
 import Foundation
-import MarvelAPI
+import ComicVineAPI
 
 @objc(CDCharacter)
 public class CDCharacter: NSManagedObject {
@@ -23,35 +23,38 @@ public class CDCharacter: NSManagedObject {
     @NSManaged public var lastUpdated: Date?
     @NSManaged public var cachedAt: Date?
 
-    func toCharacter() -> MarvelAPI.Character? {
-        guard let name = name else { return nil }
-
-        let thumbnail = MarvelAPI.MarvelImage(path: thumbnailPath ?? "", extension: "jpg")
-
-        return MarvelAPI.Character(
-            id: Int(id),
-            name: name,
-            description: characterDescription ?? "",
-            modified: "",
-            thumbnail: thumbnail,
-            resourceURI: "",
-            comics: MarvelAPI.ComicList(available: Int(comicsCount), collectionURI: "", items: [], returned: 0),
-            series: MarvelAPI.SeriesList(available: Int(seriesCount), collectionURI: "", items: [], returned: 0),
-            stories: MarvelAPI.StoryList(available: Int(storiesCount), collectionURI: "", items: [], returned: 0),
-            events: MarvelAPI.EventList(available: Int(eventsCount), collectionURI: "", items: [], returned: 0),
-            urls: []
-        )
+    /// Por enquanto, não reconstruímos o `Character` completo a partir do cache,
+    /// pois o `ComicVineImage` não expõe um init público.
+    /// Se for necessário no futuro, dá pra:
+    ///  - expor um init público em `ComicVineImage` no módulo ComicVineAPI, ou
+    ///  - guardar mais metadados aqui e montar um `Character` mínimo.
+    func toCharacter() -> ComicVineAPI.Character? {
+        return nil
     }
 
-    func update(from character: MarvelAPI.Character) {
+    /// Atualiza os campos do CoreData a partir de um `ComicVineAPI.Character`
+    /// (já no modelo novo da ComicVine, sem Marvel).
+    func update(from character: Character, isFavorite: Bool = false) {
         id = Int32(character.id)
         name = character.name
         characterDescription = character.description
-        thumbnailPath = character.thumbnail.path
-        comicsCount = Int32(character.comics.available)
-        seriesCount = Int32(character.series.available)
-        storiesCount = Int32(character.stories.available)
-        eventsCount = Int32(character.events.available)
+
+        // Guardamos a melhor URL da imagem como string
+        thumbnailPath = character.image.bestQualityUrl?.absoluteString
+
+        // ComicVine: total de aparições
+        comicsCount = Int32(character.countOfIssueAppearances)
+
+        // ComicVine: quantos volumes/séries relacionados
+        seriesCount = Int32(character.volumeCredits?.count ?? 0)
+
+        // ComicVine: quantas issues/créditos de edição
+        storiesCount = Int32(character.issueCredits?.count ?? 0)
+
+        // ComicVine: quantos inimigos (reaproveitando campo "events" como algo relevante)
+        eventsCount = Int32(character.characterEnemies?.count ?? 0)
+
+        self.isFavorite = isFavorite
         lastUpdated = Date()
         cachedAt = Date()
     }

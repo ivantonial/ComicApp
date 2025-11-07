@@ -206,7 +206,7 @@ public struct SettingsView: View {
 
             Button { viewModel.rateApp() } label: {
                 Label {
-                    Text("Rate MarvelApp")
+                    Text("Rate ComicApp")
                         .foregroundColor(.primary)
                 } icon: {
                     Image(systemName: "star.fill")
@@ -216,7 +216,7 @@ public struct SettingsView: View {
 
             Button { showingShareSheet = true } label: {
                 Label {
-                    Text("Share MarvelApp")
+                    Text("Share ComicApp")
                         .foregroundColor(.primary)
                 } icon: {
                     Image(systemName: "square.and.arrow.up")
@@ -251,7 +251,7 @@ public struct SettingsView: View {
                 }
             }
 
-            Link(destination: URL(string: "https://marvelapp.com/faq")!) {
+            Link(destination: URL(string: "https://comicapp.com/faq")!) {
                 Label {
                     HStack {
                         Text("FAQ")
@@ -309,10 +309,10 @@ public struct SettingsView: View {
             HStack {
                 Label {
                     VStack(alignment: .leading) {
-                        Text("Data © Marvel")
+                        Text("Data © ComicsVine")
                             .font(.caption)
                             .foregroundColor(.secondary)
-                        Text("© 2025 MARVEL")
+                        Text("© 2025 ComicsVine")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }

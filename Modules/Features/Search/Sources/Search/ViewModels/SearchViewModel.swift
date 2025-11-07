@@ -7,7 +7,7 @@
 
 import Combine
 import Foundation
-import MarvelAPI
+import ComicVineAPI
 import SwiftUI
 
 @MainActor
@@ -38,8 +38,10 @@ public final class SearchViewModel: ObservableObject {
     // MARK: - Computed UI
     public var hasResults: Bool {
         switch searchType {
-        case .characters: return !characterResults.isEmpty
-        case .comics:     return !comicResults.isEmpty
+        case .characters:
+            return !characterResults.isEmpty
+        case .comics:
+            return !comicResults.isEmpty
         }
     }
 
@@ -60,9 +62,9 @@ public final class SearchViewModel: ObservableObject {
     }
 
     // MARK: - Init
-    public init(marvelService: MarvelServiceProtocol) {
-        self.searchCharactersUseCase = SearchCharactersWithCacheUseCase(service: marvelService)
-        self.searchComicsUseCase     = SearchComicsWithCacheUseCase(service: marvelService)
+    public init(comicVineService: ComicVineServiceProtocol) {
+        self.searchCharactersUseCase = SearchCharactersWithCacheUseCase(service: comicVineService)
+        self.searchComicsUseCase     = SearchComicsWithCacheUseCase(service: comicVineService)
         setupSearchDebounce()
         loadRecentSearches()
     }
@@ -74,8 +76,12 @@ public final class SearchViewModel: ObservableObject {
             clearResults()
             return
         }
+
         searchTask?.cancel()
-        searchTask = Task { await performSearch(with: q) }
+        searchTask = Task { [weak self] in
+            guard let self else { return }
+            await self.performSearch(with: q)
+        }
     }
 
     public func switchSearchType(_ type: SearchType) {
@@ -134,16 +140,24 @@ public final class SearchViewModel: ObservableObject {
         do {
             switch searchType {
             case .characters:
-                let results = try await searchCharactersUseCase.execute(query: query, offset: 0, limit: 30)
+                let results = try await searchCharactersUseCase.execute(
+                    query: query,
+                    offset: 0,
+                    limit: 30
+                )
                 guard !Task.isCancelled else { return }
                 characterResults = results
                 generateSuggestions(from: results.map(\.name))
 
             case .comics:
-                let results = try await searchComicsUseCase.execute(query: query, offset: 0, limit: 30)
+                let results = try await searchComicsUseCase.execute(
+                    query: query,
+                    offset: 0,
+                    limit: 30
+                )
                 guard !Task.isCancelled else { return }
                 comicResults = results
-                // Para comics, precisamos processar os títulos para remover informações duplicadas de variantes
+                // Para comics, processamos os títulos para remover variantes duplicadas
                 let processedTitles = processComicTitles(results.map(\.title))
                 generateSuggestions(from: processedTitles)
             }
@@ -162,7 +176,7 @@ public final class SearchViewModel: ObservableObject {
             .debounce(for: .seconds(debounceTime), scheduler: RunLoop.main)
             .removeDuplicates()
             .sink { [weak self] text in
-                guard let self = self else { return }
+                guard let self else { return }
                 if text.isEmpty || text.count >= 2 {
                     self.search()
                 }
@@ -273,14 +287,25 @@ public final class SearchViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Character Sorting (DESMARVELIZADO)
     private func applyCharacterSorting(_ characters: [Character]) -> [Character] {
         switch sortOption {
         case .name:
-            return characters.sorted { $0.name.localizedCompare($1.name) == .orderedAscending }
+            return characters.sorted {
+                $0.name.localizedCompare($1.name) == .orderedAscending
+            }
         case .popularity:
-            return characters.sorted { $0.comics.available > $1.comics.available }
+            // ComicVine: usamos o número de aparições em edições
+            return characters.sorted {
+                $0.countOfIssueAppearances > $1.countOfIssueAppearances
+            }
         case .recent:
-            return characters.sorted { $0.modified > $1.modified }
+            // ComicVine: ordenamos pela data da última atualização
+            // (dateLastUpdated vem como String "YYYY-MM-DD HH:MM:SS", que
+            //  funciona bem para comparação lexicográfica)
+            return characters.sorted {
+                $0.dateLastUpdated > $1.dateLastUpdated
+            }
         }
     }
 

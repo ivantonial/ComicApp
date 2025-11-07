@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import MarvelAPI
+import ComicVineAPI
 
 /// Destinos de navegação controlados pelo AppCoordinator
 public enum CharacterDestination: Hashable {
