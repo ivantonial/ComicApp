@@ -57,18 +57,26 @@ public final class FavoritesViewModel: ObservableObject {
     }
 
     // MARK: - Public Methods
-
     public func loadFavorites() {
+        print("🔍 [FavoritesVM] loadFavorites() iniciado")
         isLoading = true
         error = nil
 
         Task {
-            defer { isLoading = false }
+            defer {
+                isLoading = false
+                print("🔍 [FavoritesVM] loadFavorites() finalizado com \(favoriteCharacters.count) favoritos")
+            }
             do {
+                print("🔍 [FavoritesVM] Chamando favoritesService.getAllFavorites()...")
                 favoriteCharacters = try await favoritesService.getAllFavorites()
+                print("✅ [FavoritesVM] Favoritos carregados com sucesso: \(favoriteCharacters.count) personagens")
+                for character in favoriteCharacters {
+                    print("  📌 ID: \(character.id) - Nome: \(character.name)")
+                }
             } catch {
                 self.error = error
-                print("❌ Erro ao carregar favoritos: \(error)")
+                print("❌ [FavoritesVM] Erro ao carregar favoritos: \(error)")
             }
         }
     }

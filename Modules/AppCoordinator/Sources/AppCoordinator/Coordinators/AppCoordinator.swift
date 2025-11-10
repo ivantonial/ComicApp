@@ -265,7 +265,8 @@ public final class AppCoordinator: ObservableObject {
             character: character,
             fetchCharacterDetailUseCase: fetchCharacterDetailUseCase,
             fetchCharacterComicsUseCase: fetchCharacterComicsUseCase,
-            favoritesService: favoritesService
+            favoritesService: favoritesService,
+            persistenceManager: persistenceManager
         )
 
         // ✅ Adiciona callback para navegação aos quadrinhos

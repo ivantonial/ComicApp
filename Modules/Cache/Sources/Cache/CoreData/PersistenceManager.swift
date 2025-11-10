@@ -185,7 +185,22 @@ public final class PersistenceManager: PersistenceManagerProtocol, @unchecked Se
             fetch.predicate = NSPredicate(format: "isFavorite == YES")
             fetch.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
             do {
-                return try context.fetch(fetch).compactMap { $0.toCharacter() }
+                let cdCharacters = try context.fetch(fetch)
+                print("📀 [PersistenceManager] Encontrados \(cdCharacters.count) favoritos no Core Data")
+                for cd in cdCharacters {
+                    print("  💾 ID: \(cd.id) - Nome: \(cd.name ?? "sem nome") - isFavorite: \(cd.isFavorite)")
+                }
+
+                let characters = cdCharacters.compactMap { cd -> Character? in
+                    let character = cd.toCharacter()
+                    if character == nil {
+                        print("  ⚠️ Falha ao converter CDCharacter ID: \(cd.id) para Character")
+                    }
+                    return character
+                }
+
+                print("📀 [PersistenceManager] Convertidos \(characters.count) de \(cdCharacters.count) para Character")
+                return characters
             } catch {
                 print("⚠️ Erro ao carregar favoritos: \(error)")
                 return []

@@ -23,6 +23,15 @@ public final class FavoritesService: ObservableObject {
     // MARK: - Private Properties
     private let persistenceManager: PersistenceManagerProtocol
 
+    // MARK: - Date formatter (mesmo formato aproximado da ComicVine)
+    private static let comicVineDateFormatter: DateFormatter = {
+        let df = DateFormatter()
+        df.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        df.locale = Locale(identifier: "en_US_POSIX")
+        df.timeZone = TimeZone(secondsFromGMT: 0)
+        return df
+    }()
+
     // MARK: - Initialization
     public init(persistenceManager: PersistenceManagerProtocol) {
         self.persistenceManager = persistenceManager
@@ -31,7 +40,7 @@ public final class FavoritesService: ObservableObject {
         }
     }
 
-    // MARK: - Public API (sincrono em memória)
+    // MARK: - Public API (síncrono em memória)
 
     /// Verifica se um personagem é favorito com base no array em memória.
     public func isFavorite(characterId: Int) -> Bool {
@@ -136,14 +145,83 @@ extension FavoritesService: FavoritesServiceProtocol {
 
     /// Adiciona um favorito vindo de um `FavoriteCharacterInput`.
     public func addFavorite(character: FavoriteCharacterInput) async throws {
-        // Tenta carregar o Character completo da persistência.
+        print("🔍 [FavoritesService] addFavorite chamado para character ID: \(character.id)")
+
+        // 1. Tenta carregar o Character completo da persistência.
         if let loaded = await persistenceManager.loadCharacter(withId: character.id) {
+            print("✅ [FavoritesService] Personagem encontrado no Core Data, adicionando aos favoritos")
             await addFavorite(loaded)
             return
         }
 
-        // Se não encontrar, simplesmente ignora para evitar criar Character incompleto.
-        print("⚠️ [FavoritesService] Character \(character.id) não encontrado na persistência; favorito ignorado.")
+        // 2. Se não encontrar, cria um Character "básico" compatível com o modelo da ComicVine.
+        print("⚠️ [FavoritesService] Character \(character.id) não encontrado no Core Data")
+        print("🔨 [FavoritesService] Criando personagem básico para salvar...")
+
+        let slugName = character.name
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "-")
+
+        let apiDetailUrl = "https://comicvine.gamespot.com/api/character/4005-\(character.id)/"
+        let siteDetailUrl = "https://comicvine.gamespot.com/\(slugName)/4005-\(character.id)/"
+
+        let thumbnailString = character.thumbnailURL?.absoluteString
+        let nowString = FavoritesService.comicVineDateFormatter.string(from: Date())
+
+        // Monta o payload mínimo de JSON esperado pelo Decodable de `Character`.
+        let imagePayload = MinimalCharacterPayload.ImagePayload(
+            iconUrl: thumbnailString,
+            mediumUrl: thumbnailString,
+            screenUrl: thumbnailString,
+            screenLargeUrl: thumbnailString,
+            smallUrl: thumbnailString,
+            superUrl: thumbnailString,
+            thumbUrl: thumbnailString,
+            tinyUrl: thumbnailString,
+            originalUrl: thumbnailString
+        )
+
+        let payload = MinimalCharacterPayload(
+            id: character.id,
+            name: character.name,
+            image: imagePayload,
+            apiDetailUrl: apiDetailUrl,
+            siteDetailUrl: siteDetailUrl,
+            countOfIssueAppearances: 0,
+            dateAdded: nowString,
+            dateLastUpdated: nowString
+        )
+
+        let encoder = JSONEncoder()
+        let data = try encoder.encode(payload)
+
+        // Aqui deixamos o próprio Decodable do módulo ComicVineAPI montar o Character,
+        // incluindo o `ComicVineImage`, sem precisar chamar init público.
+        let basicCharacter = try JSONDecoder().decode(Character.self, from: data)
+
+        do {
+            // Primeiro salva o personagem básico no Core Data
+            print("💾 [FavoritesService] Salvando personagem básico no Core Data...")
+            try await persistenceManager.saveCharacter(basicCharacter)
+            print("✅ [FavoritesService] Personagem básico salvo no Core Data")
+
+            // Agora adiciona aos favoritos
+            print("⭐ [FavoritesService] Marcando como favorito...")
+            try await persistenceManager.saveFavorite(basicCharacter)
+            favoriteCharacters.append(basicCharacter)
+
+            NotificationCenter.default.post(name: .favoritesDidChange, object: nil)
+            NotificationCenter.default.post(
+                name: .favoriteStatusChanged,
+                object: nil,
+                userInfo: ["characterId": character.id, "isFavorite": true]
+            )
+
+            print("✅ [FavoritesService] Personagem adicionado aos favoritos com sucesso!")
+        } catch {
+            print("❌ [FavoritesService] Erro ao criar e salvar personagem básico: \(error)")
+            throw error
+        }
     }
 
     /// Remove favorito pelo ID, compatível com o protocolo.
@@ -166,4 +244,55 @@ extension FavoritesService: FavoritesServiceProtocol {
 public extension Notification.Name {
     /// Notificação de alteração de status de um único personagem
     static let favoriteStatusChanged = Notification.Name("favoriteStatusChanged")
+}
+
+// MARK: - MinimalCharacterPayload (somente para construção de Character básico)
+
+/// Payload mínimo só para gerar um `Character` válido via `JSONDecoder`,
+/// sem precisar acessar o init do `ComicVineImage` (que é interno ao módulo ComicVineAPI).
+private struct MinimalCharacterPayload: Encodable {
+
+    struct ImagePayload: Encodable {
+        let iconUrl: String?
+        let mediumUrl: String?
+        let screenUrl: String?
+        let screenLargeUrl: String?
+        let smallUrl: String?
+        let superUrl: String?
+        let thumbUrl: String?
+        let tinyUrl: String?
+        let originalUrl: String?
+
+        enum CodingKeys: String, CodingKey {
+            case iconUrl = "icon_url"
+            case mediumUrl = "medium_url"
+            case screenUrl = "screen_url"
+            case screenLargeUrl = "screen_large_url"
+            case smallUrl = "small_url"
+            case superUrl = "super_url"
+            case thumbUrl = "thumb_url"
+            case tinyUrl = "tiny_url"
+            case originalUrl = "original_url"
+        }
+    }
+
+    let id: Int
+    let name: String
+    let image: ImagePayload
+    let apiDetailUrl: String
+    let siteDetailUrl: String
+    let countOfIssueAppearances: Int
+    let dateAdded: String
+    let dateLastUpdated: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case image
+        case apiDetailUrl = "api_detail_url"
+        case siteDetailUrl = "site_detail_url"
+        case countOfIssueAppearances = "count_of_issue_appearances"
+        case dateAdded = "date_added"
+        case dateLastUpdated = "date_last_updated"
+    }
 }

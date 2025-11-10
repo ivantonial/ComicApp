@@ -31,6 +31,29 @@ public struct ComicVineImage: Decodable, Sendable {
         case originalUrl = "original_url"
     }
 
+    // MARK: - Public Initializer
+    public init(
+        iconUrl: String? = nil,
+        mediumUrl: String? = nil,
+        screenUrl: String? = nil,
+        screenLargeUrl: String? = nil,
+        smallUrl: String? = nil,
+        superUrl: String? = nil,
+        thumbUrl: String? = nil,
+        tinyUrl: String? = nil,
+        originalUrl: String? = nil
+    ) {
+        self.iconUrl = iconUrl
+        self.mediumUrl = mediumUrl
+        self.screenUrl = screenUrl
+        self.screenLargeUrl = screenLargeUrl
+        self.smallUrl = smallUrl
+        self.superUrl = superUrl
+        self.thumbUrl = thumbUrl
+        self.tinyUrl = tinyUrl
+        self.originalUrl = originalUrl
+    }
+
     // MARK: - Computed Properties for Different Quality Levels
     public var bestQualityUrl: URL? {
         let urls = [originalUrl, superUrl, screenLargeUrl, screenUrl, mediumUrl, smallUrl, thumbUrl]
