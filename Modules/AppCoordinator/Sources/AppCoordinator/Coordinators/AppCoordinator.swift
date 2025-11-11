@@ -162,6 +162,9 @@ public final class AppCoordinator: ObservableObject {
 
     // MARK: - Navigation Methods
     public func navigateToCharacter(_ character: Character, in tab: AppTab) {
+        print("🧭 [Navigation] Navigating to character: \(character.name) in tab: \(tab)")
+        print("🧭 [Navigation] Current favoritesPath count before: \(favoritesPath.count)")
+
         switch tab {
         case .characters:
             charactersPath.append(CharacterDestination.detail(character))
@@ -169,8 +172,9 @@ public final class AppCoordinator: ObservableObject {
             searchPath.append(CharacterDestination.detail(character))
         case .favorites:
             favoritesPath.append(CharacterDestination.detail(character))
+            print("🧭 [Navigation] favoritesPath count after: \(favoritesPath.count)")
         case .settings:
-            break // Settings não navega para personagens
+            break
         }
     }
 
