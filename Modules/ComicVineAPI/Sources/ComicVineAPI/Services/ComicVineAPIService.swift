@@ -60,11 +60,11 @@ public final class ComicVineAPIService: ComicVineServiceProtocol, @unchecked Sen
                     "offset": String(offset),
                     "limit": String(limit),
                     "sort": "date_last_updated:desc",
-                    "field_list": "id,name,description,deck,aliases,image,api_detail_url,site_detail_url,first_appeared_in_issue,count_of_issue_appearances,real_name,birth,date_added,date_last_updated,gender,origin,publisher"
+                    "field_list": "id,name,description,deck,aliases,image,api_detail_url,site_detail_url,first_appeared_in_issue,count_of_issue_appearances,real_name,birth,date_added,date_last_updated,gender,origin,publisher,character_enemies,character_friends,creators,issue_credits,powers,teams,volume_credits"
                 ]
             case .character:
                 return [
-                    "field_list": "id,name,description,deck,aliases,image,api_detail_url,site_detail_url,first_appeared_in_issue,count_of_issue_appearances,real_name,birth,date_added,date_last_updated,gender,origin,publisher"
+                    "field_list": "id,name,description,deck,aliases,image,api_detail_url,site_detail_url,first_appeared_in_issue,count_of_issue_appearances,real_name,birth,date_added,date_last_updated,gender,origin,publisher,character_enemies,character_friends,creators,issue_credits,powers,teams,volume_credits"
                 ]
             case .issues(let offset, let limit):
                 return [
@@ -84,7 +84,7 @@ public final class ComicVineAPIService: ComicVineServiceProtocol, @unchecked Sen
                     "offset": String(offset),
                     "limit": String(limit),
                     "field_list": resources == "character"
-                        ? "id,name,description,deck,aliases,image,api_detail_url,site_detail_url,first_appeared_in_issue,count_of_issue_appearances,real_name,birth,date_added,date_last_updated,gender,origin,publisher"
+                        ? "id,name,description,deck,aliases,image,api_detail_url,site_detail_url,first_appeared_in_issue,count_of_issue_appearances,real_name,birth,date_added,date_last_updated,gender,origin,publisher,character_enemies,character_friends,creators,issue_credits,powers,teams,volume_credits"
                         : "id,name,issue_number,description,deck,image,cover_date,store_date,api_detail_url,site_detail_url,volume,has_staff_review,date_added,date_last_updated"
                 ]
             case .characterIssues(let characterId, let offset, let limit):
@@ -138,7 +138,7 @@ public final class ComicVineAPIService: ComicVineServiceProtocol, @unchecked Sen
         )
         try validateResponse(response)
 
-        // Como results vem como objeto único convertido para array de 1 elemento
+        // Como results vem como objeto unico convertido para array de 1 elemento
         guard let character = response.results.first else {
             throw NetworkError.serverErrorMessage("Character not found")
         }
