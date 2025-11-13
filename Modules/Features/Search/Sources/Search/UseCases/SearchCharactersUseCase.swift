@@ -5,8 +5,8 @@
 //  Created by Ivan Tonial IP.TV on 09/10/25.
 //
 
-import Foundation
 import ComicVineAPI
+import Foundation
 
 /// Caso de uso responsável por executar buscas de personagens.
 public final class SearchCharactersUseCase: Sendable {

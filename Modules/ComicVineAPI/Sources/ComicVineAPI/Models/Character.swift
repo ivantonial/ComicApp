@@ -263,4 +263,70 @@ public extension Character {
     var hasDeck: Bool {
         deck != nil && !deck!.isEmpty
     }
+
+    // MARK: - Cache Support
+
+    /// Cria um Character básico a partir de dados do cache
+    /// Usado pelo PersistenceManager para reconstruir Characters salvos
+    public static func makeFromCache(
+        id: Int,
+        name: String,
+        description: String? = nil,
+        thumbnailPath: String? = nil,
+        comicsCount: Int = 0,
+        dateAdded: String? = nil,
+        dateLastUpdated: String? = nil
+    ) -> Character {
+        // Criar ComicVineImage com a URL disponível
+        let image = ComicVineImage(
+            iconUrl: thumbnailPath,
+            mediumUrl: thumbnailPath,
+            screenUrl: thumbnailPath,
+            screenLargeUrl: thumbnailPath,
+            smallUrl: thumbnailPath,
+            superUrl: thumbnailPath,
+            thumbUrl: thumbnailPath,
+            tinyUrl: thumbnailPath,
+            originalUrl: thumbnailPath
+        )
+
+        // Criar URLs básicas para o personagem
+        let apiDetailUrl = "https://comicvine.gamespot.com/api/character/4005-\(id)/"
+        let slugName = name.lowercased().replacingOccurrences(of: " ", with: "-")
+        let siteDetailUrl = "https://comicvine.gamespot.com/\(slugName)/4005-\(id)/"
+
+        // Usar data atual se não fornecida
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+        let currentDate = dateFormatter.string(from: Date())
+
+        return Character(
+            id: id,
+            name: name,
+            description: description,
+            deck: nil,
+            aliases: nil,
+            image: image,
+            apiDetailUrl: apiDetailUrl,
+            siteDetailUrl: siteDetailUrl,
+            firstAppearedInIssue: nil,
+            countOfIssueAppearances: comicsCount,
+            realName: nil,
+            birth: nil,
+            dateAdded: dateAdded ?? currentDate,
+            dateLastUpdated: dateLastUpdated ?? currentDate,
+            gender: nil,
+            origin: nil,
+            publisher: nil,
+            characterEnemies: nil,
+            characterFriends: nil,
+            creators: nil,
+            issueCredits: nil,
+            powers: nil,
+            teams: nil,
+            volumeCredits: nil
+        )
+    }
 }

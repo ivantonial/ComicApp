@@ -5,8 +5,8 @@
 //  Created by Ivan Tonial IP.TV on 09/10/25.
 //
 
-import DesignSystem
 import ComicVineAPI
+import DesignSystem
 import SwiftUI
 
 public struct FavoriteCardView: View {
@@ -31,12 +31,16 @@ public struct FavoriteCardView: View {
     }
 
     public var body: some View {
+        let _ = print("🔧 [FavoriteCardView] Rendering card for: \(character.name)")
         ZStack(alignment: .topTrailing) {
-            // Card principal
-            Button(action: onTap) {
-                ContentCardComponent(model: character.toContentCardModel())
-            }
-            .buttonStyle(.plain)
+            // Card principal - passa o onTap diretamente para o ContentCardComponent
+            ContentCardComponent(
+                model: character.toContentCardModel(),
+                onTap: {
+                    print("🎯 [FavoriteCardView] onTap triggered for: \(character.name)")
+                    onTap()
+                }  // ✅ Passa o callback corretamente
+            )
 
             // Overlay de seleção / remoção
             overlayView
@@ -58,7 +62,10 @@ public struct FavoriteCardView: View {
                 .padding(8)
         } else {
             // Modo normal: botão de remover favorito (coração)
-            Button(action: onRemove) {
+            Button(action: {
+                print("❤️ [FavoriteCardView] Remove button tapped for: \(character.name)")
+                onRemove()
+            }) {
                 Image(systemName: "heart.fill")
                     .font(.system(size: 18))
                     .foregroundColor(.red)
@@ -69,6 +76,7 @@ public struct FavoriteCardView: View {
             }
             .buttonStyle(.plain)
             .padding(8)
+            .allowsHitTesting(true) // ✅ Garante que apenas o botão responda ao toque
         }
     }
 }

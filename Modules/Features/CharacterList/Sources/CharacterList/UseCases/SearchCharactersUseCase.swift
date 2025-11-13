@@ -5,9 +5,9 @@
 //  Created by Ivan Tonial IP.TV on 13/10/25.
 //
 
-import Foundation
-import ComicVineAPI
 import Cache
+import ComicVineAPI
+import Foundation
 
 public protocol SearchCharactersUseCase {
     func search(_ query: String, offset: Int, limit: Int) async throws -> [Character]

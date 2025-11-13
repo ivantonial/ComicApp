@@ -5,18 +5,19 @@
 //  Created by Ivan Tonial IP.TV on 09/10/25.
 //
 
+import Cache
+import ComicVineAPI
 import Core
 import Foundation
-import ComicVineAPI
 import SwiftUI
 import UIKit
 
 #if DEBUG
-fileprivate func characterDetailDebugPrint(_ message: String) {
+private func characterDetailDebugPrint(_ message: String) {
     Swift.print("🛠 [CharacterDetailVM] \(message)")
 }
 #else
-fileprivate func characterDetailDebugPrint(_ message: String) { }
+private func characterDetailDebugPrint(_ message: String) { }
 #endif
 
 @MainActor
@@ -31,6 +32,7 @@ public final class CharacterDetailViewModel: ObservableObject {
     private let fetchCharacterDetailUseCase: FetchCharacterDetailUseCase?
     private let fetchCharacterComicsUseCase: FetchCharacterComicsUseCase?
     private let favoritesService: FavoritesServiceProtocol?
+    private let persistenceManager: PersistenceManagerProtocol?
 
     private let safeCharacterId: Int
     private let safeCharacterName: String
@@ -59,7 +61,8 @@ public final class CharacterDetailViewModel: ObservableObject {
         character: ComicVineAPI.Character,
         fetchCharacterDetailUseCase: FetchCharacterDetailUseCase? = nil,
         fetchCharacterComicsUseCase: FetchCharacterComicsUseCase? = nil,
-        favoritesService: FavoritesServiceProtocol? = nil
+        favoritesService: FavoritesServiceProtocol? = nil,
+        persistenceManager: PersistenceManagerProtocol? = nil
     ) {
         characterDetailDebugPrint("🟢 CharacterDetailViewModel.init - Starting")
 
@@ -74,12 +77,46 @@ public final class CharacterDetailViewModel: ObservableObject {
         self.fetchCharacterDetailUseCase = fetchCharacterDetailUseCase
         self.fetchCharacterComicsUseCase = fetchCharacterComicsUseCase
         self.favoritesService = favoritesService
+        self.persistenceManager = persistenceManager
 
         characterDetailDebugPrint("📊 Stats - Comics: \(character.countOfIssueAppearances)")
         characterDetailDebugPrint("📊 Stats - Teams: \(character.teams?.count ?? 0)")
         characterDetailDebugPrint("📊 Stats - Powers: \(character.powers?.count ?? 0)")
         characterDetailDebugPrint("📊 Stats - Enemies: \(character.characterEnemies?.count ?? 0)")
         characterDetailDebugPrint("📊 Stats - Friends: \(character.characterFriends?.count ?? 0)")
+
+        // Debug: Verificar se persistenceManager foi passado
+        characterDetailDebugPrint("🔍 PersistenceManager disponível: \(persistenceManager != nil)")
+
+        // Salva o personagem inicial no Core Data IMEDIATAMENTE
+        if let persistenceManager = persistenceManager {
+            // IMPORTANTE: Usar Task.detached para garantir que execute mesmo se o view for desmontado
+            Task.detached {
+                do {
+                    characterDetailDebugPrint("💾 [INIT] Salvando personagem inicial no Core Data...")
+                    characterDetailDebugPrint("💾 [INIT] Character ID: \(character.id)")
+                    characterDetailDebugPrint("💾 [INIT] Character Name: \(character.name)")
+
+                    try await persistenceManager.saveCharacter(character)
+
+                    characterDetailDebugPrint("✅ [INIT] Personagem salvo com sucesso no Core Data!")
+
+                    // Verificar imediatamente se foi salvo
+                    let savedCharacter = await persistenceManager.loadCharacter(withId: character.id)
+                    if savedCharacter != nil {
+                        characterDetailDebugPrint("✅ [INIT] Verificação: Personagem encontrado no Core Data após salvamento")
+                    } else {
+                        characterDetailDebugPrint("❌ [INIT] Verificação: Personagem NÃO encontrado no Core Data após salvamento")
+                    }
+                } catch {
+                    characterDetailDebugPrint("❌ [INIT] Erro ao salvar personagem inicial: \(error)")
+                }
+            }
+        } else {
+            characterDetailDebugPrint("⚠️ [INIT] PersistenceManager NÃO disponível - personagem não será salvo no Core Data")
+            characterDetailDebugPrint("⚠️ [INIT] Favoritos NÃO funcionarão corretamente!")
+        }
+
         characterDetailDebugPrint("🟢 CharacterDetailViewModel.init - Completed")
     }
 
@@ -106,9 +143,15 @@ public final class CharacterDetailViewModel: ObservableObject {
 
     public func toggleFavorite() {
         characterDetailDebugPrint("❤️ Toggle favorite called")
+        characterDetailDebugPrint("❤️ Current favorite status: \(isFavorite)")
+        characterDetailDebugPrint("❤️ Character ID: \(safeCharacterId)")
+        characterDetailDebugPrint("❤️ PersistenceManager disponível: \(persistenceManager != nil)")
+        characterDetailDebugPrint("❤️ FavoritesService disponível: \(favoritesService != nil)")
+
         // Otimista: atualiza UI imediatamente
         isFavorite.toggle()
         scheduleSaveFavoriteStatus(currentValue: isFavorite)
+
         // Haptic feedback
         let impact = UIImpactFeedbackGenerator(style: .medium)
         impact.prepare()
@@ -146,6 +189,13 @@ public final class CharacterDetailViewModel: ObservableObject {
 
                 // Atualiza o model com os dados completos
                 detailModel = CharacterDetailModel(from: updated)
+
+                // Salva o personagem completo no Core Data
+                if let persistenceManager = persistenceManager {
+                    characterDetailDebugPrint("💾 [LOAD] Salvando personagem atualizado no Core Data...")
+                    try await persistenceManager.saveCharacter(updated)
+                    characterDetailDebugPrint("✅ [LOAD] Personagem atualizado salvo no Core Data")
+                }
             }
 
             if let comicsUseCase = fetchCharacterComicsUseCase {
@@ -191,8 +241,10 @@ public final class CharacterDetailViewModel: ObservableObject {
             }
         }
     }
+
     private func scheduleSaveFavoriteStatus(currentValue: Bool) {
         characterDetailDebugPrint("💾 Saving favorite status (async)...")
+        characterDetailDebugPrint("💾 New favorite value: \(currentValue)")
 
         // Caminho com serviço remoto de favoritos
         if let service = favoritesService {
@@ -201,9 +253,25 @@ public final class CharacterDetailViewModel: ObservableObject {
 
                 do {
                     if currentValue {
-                        // Aqui estamos no MainActor, acesso direto é seguro
-                        let imageURL = self.detailModel.character.image.bestQualityUrl
+                        characterDetailDebugPrint("💾 Preparando para adicionar aos favoritos...")
 
+                        // IMPORTANTE: Primeiro garantir que o personagem está salvo no Core Data
+                        if let persistenceManager = self.persistenceManager {
+                            // Verificar se o personagem já está no Core Data
+                            let existingCharacter = await persistenceManager.loadCharacter(withId: self.safeCharacterId)
+
+                            if existingCharacter == nil {
+                                characterDetailDebugPrint("⚠️ Personagem não encontrado no Core Data, salvando agora...")
+                                // Se não estiver, salvar o personagem atual
+                                try await persistenceManager.saveCharacter(self.detailModel.character)
+                                characterDetailDebugPrint("✅ Personagem salvo no Core Data antes de favoritar")
+                            } else {
+                                characterDetailDebugPrint("✅ Personagem já existe no Core Data")
+                            }
+                        }
+
+                        // Agora adicionar aos favoritos
+                        let imageURL = self.detailModel.character.image.bestQualityUrl
                         let input = FavoriteCharacterInput(
                             id: self.safeCharacterId,
                             name: self.safeCharacterName,
@@ -213,6 +281,7 @@ public final class CharacterDetailViewModel: ObservableObject {
                         try await service.addFavorite(character: input)
                         characterDetailDebugPrint("✅ Added to favorites")
                     } else {
+                        characterDetailDebugPrint("💾 Removendo dos favoritos...")
                         try await service.removeFavorite(characterId: self.safeCharacterId)
                         characterDetailDebugPrint("✅ Removed from favorites")
                     }

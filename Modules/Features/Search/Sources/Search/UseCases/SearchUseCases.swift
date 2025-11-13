@@ -5,9 +5,9 @@
 //  Created by Ivan Tonial IP.TV on 13/10/25.
 //
 
-import Foundation
 import Cache
 import ComicVineAPI
+import Foundation
 
 // MARK: - Busca de Personagens com Cache
 public final class SearchCharactersWithCacheUseCase: Sendable {

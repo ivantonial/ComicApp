@@ -82,16 +82,17 @@ public struct ComicVineAsyncImageComponent: View {
                 // ðŸ”´ AQUI Ã© o caso da sua lista de personagens
                 // Volta a priorizar SEMPRE o screen (screen_medium),
                 // que Ã© justamente o recorte landscape mais consistente
-                return img.screenUrl
-                    ?? img.screenLargeUrl
+                return img.originalUrl
+                    ?? img.superUrl
                     ?? img.mediumUrl
-                    ?? img.originalUrl
+                    ?? img.screenUrl
+                    ?? img.screenLargeUrl
 
             case .heroImage, .detailHeader:
                 // Headers / hero: recortes bem amplos
-                return img.screenLargeUrl
+                return img.originalUrl
+                    ?? img.screenLargeUrl
                     ?? img.superUrl
-                    ?? img.originalUrl
 
             case .fullScreen:
                 // Tela cheia: sempre prioriza o original
@@ -141,13 +142,13 @@ public struct ComicVineAsyncImageComponent: View {
             case .success(let image):
                 image
                     .resizable()
-                    .scaledToFill() // equivalente ao aspectRatio(.fill), mas mais explÃ­cito aqui
+                    .aspectRatio(contentMode: contentMode)
                     .frame(
                         width: fixedSize?.width,
                         height: fixedSize?.height
                     )
-                    .cornerRadius(cornerRadius)
                     .clipped()
+                    .cornerRadius(cornerRadius)
                     .onAppear {
                         isImageLoaded = true
                         hasError = false

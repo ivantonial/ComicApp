@@ -5,8 +5,8 @@
 //  Created by Ivan Tonial IP.TV on 30/10/25.
 //
 
-import Foundation
 import ComicVineAPI
+import Foundation
 
 public protocol SearchComicsUseCase {
     func searchComics(query: String, limit: Int, offset: Int) async throws -> [Comic]

@@ -5,9 +5,9 @@
 //  Created by Ivan Tonial IP.TV on 09/10/25.
 //
 
+import ComicVineAPI
 import CoreData
 import Foundation
-import ComicVineAPI
 
 @objc(CDComic)
 public class CDComic: NSManagedObject {

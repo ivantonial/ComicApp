@@ -5,8 +5,8 @@
 //  Created by Ivan Tonial IP.TV on 13/10/25.
 //
 
-import DesignSystem
 import ComicVineAPI
+import DesignSystem
 import SwiftUI
 
 public struct ComicCardView: View {

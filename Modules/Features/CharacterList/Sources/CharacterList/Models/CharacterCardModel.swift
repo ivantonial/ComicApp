@@ -5,9 +5,9 @@
 //  Created by Ivan Tonial IP.TV on 09/10/25.
 //
 
+import ComicVineAPI
 import DesignSystem
 import Foundation
-import ComicVineAPI
 import SwiftUI
 
 public struct CharacterCardModel: Identifiable, ContentCardConvertible {

@@ -5,9 +5,9 @@
 //  Created by Ivan Tonial IP.TV on 09/10/25.
 //
 
+import ComicVineAPI
 import CoreData
 import Foundation
-import ComicVineAPI
 
 public final class CoreDataStack: @unchecked Sendable {
     public static let shared = CoreDataStack()
