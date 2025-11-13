@@ -306,11 +306,19 @@ public final class AppCoordinator: ObservableObject {
         return SettingsView(viewModel: settingsViewModel!)
     }
 
+    // ✅ MÉTODO ATUALIZADO - Abordagem Híbrida
     public func makeComicsListView(for character: Character) -> some View {
+        // Cria AMBOS os UseCases
+        let fetchIssuesByIdsUseCase = FetchIssuesByIdsUseCase(service: comicVineService)
         let fetchCharacterComicsUseCase = FetchCharacterComicsUseCase(service: comicVineService)
+
+        // Cria o ViewModel com ambos os UseCases e o service
+        // O ViewModel decidirá qual usar baseado na disponibilidade de issueCredits
         let viewModel = ComicsListViewModel(
             character: character,
-            fetchCharacterComicsUseCase: fetchCharacterComicsUseCase
+            fetchIssuesByIdsUseCase: fetchIssuesByIdsUseCase,
+            fetchCharacterComicsUseCase: fetchCharacterComicsUseCase,
+            comicVineService: comicVineService
         )
 
         return ComicsListView(viewModel: viewModel)

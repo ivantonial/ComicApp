@@ -68,7 +68,7 @@ public struct CharacterListView: View {
 
     // MARK: - Header
     private var headerView: some View {
-        Text("Comic Heroes")  // Atualizado para ficar mais genérico
+        Text("Comics Characters")  // Atualizado para ficar mais genérico
             .font(.system(size: 34, weight: .bold))
             .foregroundColor(.white)
             .frame(maxWidth: .infinity, alignment: .center)

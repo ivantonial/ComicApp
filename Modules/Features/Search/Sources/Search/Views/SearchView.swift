@@ -401,7 +401,7 @@ struct SearchResultCard: View {
                     .font(.headline)
                     .foregroundColor(.white)
 
-                if let description = character.description,
+                if let description = character.deck,
                    !description.isEmpty {
                     Text(description)
                         .font(.caption)
