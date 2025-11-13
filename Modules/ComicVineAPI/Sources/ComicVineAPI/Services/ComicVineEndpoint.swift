@@ -5,9 +5,9 @@
 //  Created by Ivan Tonial IP.TV on 31/10/25.
 //
 
+import Alamofire
 import Foundation
 import Networking
-import Alamofire
 
 /// Implementação de APIEndpoint para ComicVine API
 struct ComicVineEndpoint: APIEndpoint, Sendable {

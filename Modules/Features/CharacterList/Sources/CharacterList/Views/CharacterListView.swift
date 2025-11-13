@@ -5,9 +5,9 @@
 //  Created by Ivan Tonial IP.TV on 07/10/25.
 //
 
+import ComicVineAPI
 import Core
 import DesignSystem
-import ComicVineAPI
 import SwiftUI
 
 public struct CharacterListView: View {
@@ -68,7 +68,7 @@ public struct CharacterListView: View {
 
     // MARK: - Header
     private var headerView: some View {
-        Text("Comic Heroes")  // Atualizado para ficar mais genérico
+        Text("Comics Characters")  // Atualizado para ficar mais genérico
             .font(.system(size: 34, weight: .bold))
             .foregroundColor(.white)
             .frame(maxWidth: .infinity, alignment: .center)

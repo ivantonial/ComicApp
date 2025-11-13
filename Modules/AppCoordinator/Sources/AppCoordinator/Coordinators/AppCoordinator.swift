@@ -1,17 +1,17 @@
 // The Swift Programming Language
 // https://docs.swift.org/swift-book
 
+import Cache
 import CharacterDetail
 import CharacterList
 import ComicsList
+import ComicVineAPI
 import Core
 import Favorites
-import ComicVineAPI
 import Networking
 import Search
 import Settings
 import SwiftUI
-import Cache
 
 @MainActor
 public final class AppCoordinator: ObservableObject {
@@ -162,6 +162,9 @@ public final class AppCoordinator: ObservableObject {
 
     // MARK: - Navigation Methods
     public func navigateToCharacter(_ character: Character, in tab: AppTab) {
+        print("🧭 [Navigation] Navigating to character: \(character.name) in tab: \(tab)")
+        print("🧭 [Navigation] Current favoritesPath count before: \(favoritesPath.count)")
+
         switch tab {
         case .characters:
             charactersPath.append(CharacterDestination.detail(character))
@@ -169,8 +172,9 @@ public final class AppCoordinator: ObservableObject {
             searchPath.append(CharacterDestination.detail(character))
         case .favorites:
             favoritesPath.append(CharacterDestination.detail(character))
+            print("🧭 [Navigation] favoritesPath count after: \(favoritesPath.count)")
         case .settings:
-            break // Settings não navega para personagens
+            break
         }
     }
 
@@ -265,7 +269,8 @@ public final class AppCoordinator: ObservableObject {
             character: character,
             fetchCharacterDetailUseCase: fetchCharacterDetailUseCase,
             fetchCharacterComicsUseCase: fetchCharacterComicsUseCase,
-            favoritesService: favoritesService
+            favoritesService: favoritesService,
+            persistenceManager: persistenceManager
         )
 
         // ✅ Adiciona callback para navegação aos quadrinhos
@@ -301,11 +306,19 @@ public final class AppCoordinator: ObservableObject {
         return SettingsView(viewModel: settingsViewModel!)
     }
 
+    // ✅ MÉTODO ATUALIZADO - Abordagem Híbrida
     public func makeComicsListView(for character: Character) -> some View {
+        // Cria AMBOS os UseCases
+        let fetchIssuesByIdsUseCase = FetchIssuesByIdsUseCase(service: comicVineService)
         let fetchCharacterComicsUseCase = FetchCharacterComicsUseCase(service: comicVineService)
+
+        // Cria o ViewModel com ambos os UseCases e o service
+        // O ViewModel decidirá qual usar baseado na disponibilidade de issueCredits
         let viewModel = ComicsListViewModel(
             character: character,
-            fetchCharacterComicsUseCase: fetchCharacterComicsUseCase
+            fetchIssuesByIdsUseCase: fetchIssuesByIdsUseCase,
+            fetchCharacterComicsUseCase: fetchCharacterComicsUseCase,
+            comicVineService: comicVineService
         )
 
         return ComicsListView(viewModel: viewModel)

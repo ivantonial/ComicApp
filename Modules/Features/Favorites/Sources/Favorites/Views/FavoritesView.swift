@@ -5,9 +5,9 @@
 //  Created by Ivan Tonial IP.TV on 09/10/25.
 //
 
+import ComicVineAPI
 import Core
 import DesignSystem
-import ComicVineAPI
 import SwiftUI
 
 public struct FavoritesView: View {
@@ -34,6 +34,8 @@ public struct FavoritesView: View {
 
     // MARK: - Body
     public var body: some View {
+        let _ = print("📱 [FavoritesView] Rendering with \(viewModel.favoriteCharacters.count) favorites")
+
         ZStack {
             Color.black.ignoresSafeArea()
 
@@ -213,6 +215,7 @@ public struct FavoritesView: View {
                             if viewModel.isSelectionMode {
                                 viewModel.toggleSelection(for: character)
                             } else {
+                                print("👆 [FavoritesView] Tapped on character: \(character.name) ID: \(character.id)")
                                 onCharacterSelected?(character)
                             }
                         },

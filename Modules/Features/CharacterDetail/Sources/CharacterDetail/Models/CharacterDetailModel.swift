@@ -5,9 +5,9 @@
 //  Created by Ivan Tonial IP.TV on 10/10/25.
 //
 
+import ComicVineAPI
 import DesignSystem
 import Foundation
-import ComicVineAPI
 import SwiftUI
 
 // MARK: - Main Detail Model
@@ -31,16 +31,14 @@ public struct CharacterDetailModel: Sendable {
 
 // MARK: - Stats Model
 public struct CharacterStatsModel: Sendable {
-    /// Mantemos os mesmos campos (comics/series/stories/events) para não quebrar a UI,
-    /// mas agora mapeamos para informações disponíveis na ComicVine.
-    public let comics: StatItemModel      // total de aparições em HQs
-    public let series: StatItemModel      // volumes/créditos de volume
-    public let stories: StatItemModel     // issues/créditos de edição
-    public let events: StatItemModel      // usamos enemies (ou pode trocar para teams/powers)
+    /// Estatísticas do personagem baseadas nos dados disponíveis na ComicVine API
+    public let comics: StatItemModel      // Total de aparições em HQs
+    public let friends: StatItemModel     // Amigos do personagem
+    public let powers: StatItemModel      // Poderes do personagem
+    public let enemies: StatItemModel     // Inimigos do personagem
 
     init(from character: Character) {
-        // 1) Comics: usamos diretamente o count_of_issue_appearances
-        //    (já tem até extension comicsCount no Character)
+        // 1) Comics: número total de aparições em quadrinhos
         self.comics = StatItemModel(
             icon: "book.fill",
             title: "Comics",
@@ -48,28 +46,27 @@ public struct CharacterStatsModel: Sendable {
             color: .red
         )
 
-        // 2) "Series": mapeamos para volumeCredits (séries/volumes ligados ao personagem)
-        let seriesCount = character.volumeCredits?.count ?? 0
-        self.series = StatItemModel(
-            icon: "tv.fill",
-            title: "Series",
-            value: seriesCount,
+        // 2) Friends: quantidade de amigos/aliados do personagem
+        let friendsCount = character.characterFriends?.count ?? 0
+        self.friends = StatItemModel(
+            icon: "person.2.fill",
+            title: "Friends",
+            value: friendsCount,
             color: .blue
         )
 
-        // 3) "Stories": mapeamos para issueCredits (edições em que o personagem aparece)
-        let storiesCount = character.issueCredits?.count ?? 0
-        self.stories = StatItemModel(
-            icon: "star.fill",
-            title: "Issues",
-            value: storiesCount,
+        // 3) Powers: quantidade de poderes/habilidades do personagem
+        let powersCount = character.powers?.count ?? 0
+        self.powers = StatItemModel(
+            icon: "bolt.fill",
+            title: "Powers",
+            value: powersCount,
             color: .yellow
         )
 
-        // 4) "Events": como a ComicVine não tem "eventos" no modelo atual,
-        //    usamos characterEnemies como algo relevante.
+        // 4) Enemies: quantidade de inimigos do personagem
         let enemiesCount = character.characterEnemies?.count ?? 0
-        self.events = StatItemModel(
+        self.enemies = StatItemModel(
             icon: "exclamationmark.triangle.fill",
             title: "Enemies",
             value: enemiesCount,
@@ -78,7 +75,7 @@ public struct CharacterStatsModel: Sendable {
     }
 
     public var allStats: [StatItemModel] {
-        [comics, series, stories, events]
+        [comics, friends, powers, enemies]
     }
 }
 
