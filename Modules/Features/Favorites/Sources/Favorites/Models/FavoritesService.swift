@@ -6,9 +6,9 @@
 //
 
 import Cache
-import Core
-import ComicVineAPI
 import Combine
+import ComicVineAPI
+import Core
 import Foundation
 
 @MainActor

@@ -5,8 +5,8 @@
 //  Created by Ivan Tonial IP.TV on 10/10/25.
 //
 
-import SwiftUI
 import DesignSystem
+import SwiftUI
 
 public struct CharacterDetailDescriptionView: View {
     // MARK: - Inputs
@@ -91,4 +91,3 @@ private struct DescriptionWebSheet: View {
         }
     }
 }
-

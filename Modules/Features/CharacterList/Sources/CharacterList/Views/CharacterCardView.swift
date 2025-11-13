@@ -5,8 +5,8 @@
 //  Created by Ivan Tonial IP.TV on 07/10/25.
 //
 
-import DesignSystem
 import ComicVineAPI
+import DesignSystem
 import SwiftUI
 
 /// View específica para exibir cards de personagens.

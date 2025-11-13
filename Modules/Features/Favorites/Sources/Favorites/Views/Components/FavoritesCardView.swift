@@ -5,8 +5,8 @@
 //  Created by Ivan Tonial IP.TV on 09/10/25.
 //
 
-import DesignSystem
 import ComicVineAPI
+import DesignSystem
 import SwiftUI
 
 public struct FavoriteCardView: View {
@@ -31,7 +31,7 @@ public struct FavoriteCardView: View {
     }
 
     public var body: some View {
-        let _ = print("🔧 [FavoriteCardView] Rendering card for: \(character.name)")
+        _ = print("🔧 [FavoriteCardView] Rendering card for: \(character.name)")
         ZStack(alignment: .topTrailing) {
             // Card principal - passa o onTap diretamente para o ContentCardComponent
             ContentCardComponent(

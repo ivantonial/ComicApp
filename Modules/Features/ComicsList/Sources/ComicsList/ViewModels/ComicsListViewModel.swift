@@ -5,11 +5,11 @@
 //  Created by Ivan Tonial IP.TV on 09/10/25.
 //
 
+import ComicVineAPI
 import Core
 import Foundation
-import ComicVineAPI
-import SwiftUI
 import Networking
+import SwiftUI
 
 @MainActor
 public final class ComicsListViewModel: ObservableObject {

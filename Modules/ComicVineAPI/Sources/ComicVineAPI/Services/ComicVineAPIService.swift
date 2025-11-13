@@ -5,9 +5,9 @@
 //  Created by Ivan Tonial IP.TV on 07/10/25.
 //
 
+import Alamofire
 import Foundation
 import Networking
-import Alamofire
 
 public protocol ComicVineServiceProtocol: Sendable {
     func fetchCharacters(offset: Int, limit: Int) async throws -> [Character]
@@ -262,9 +262,3 @@ private extension Array {
         }
     }
 }
-
-
-
-
-
-

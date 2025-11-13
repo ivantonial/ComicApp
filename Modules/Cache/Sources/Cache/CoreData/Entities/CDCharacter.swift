@@ -5,9 +5,9 @@
 //  Created by Ivan Tonial IP.TV on 09/10/25.
 //
 
+import ComicVineAPI
 import CoreData
 import Foundation
-import ComicVineAPI
 
 @objc(CDCharacter)
 public class CDCharacter: NSManagedObject {
@@ -131,11 +131,3 @@ extension CDCharacter {
         return e
     }
 }
-
-
-
-
-
-
-
-

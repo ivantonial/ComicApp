@@ -1,17 +1,17 @@
 // The Swift Programming Language
 // https://docs.swift.org/swift-book
 
+import Cache
 import CharacterDetail
 import CharacterList
 import ComicsList
+import ComicVineAPI
 import Core
 import Favorites
-import ComicVineAPI
 import Networking
 import Search
 import Settings
 import SwiftUI
-import Cache
 
 @MainActor
 public final class AppCoordinator: ObservableObject {

@@ -7,9 +7,9 @@
 
 import CharacterList
 import ComicsList
+import ComicVineAPI
 import Core
 import DesignSystem
-import ComicVineAPI
 import SwiftUI
 
 public struct SearchView: View {

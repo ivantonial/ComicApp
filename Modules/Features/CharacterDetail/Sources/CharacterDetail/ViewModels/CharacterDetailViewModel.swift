@@ -6,18 +6,18 @@
 //
 
 import Cache
+import ComicVineAPI
 import Core
 import Foundation
-import ComicVineAPI
 import SwiftUI
 import UIKit
 
 #if DEBUG
-fileprivate func characterDetailDebugPrint(_ message: String) {
+private func characterDetailDebugPrint(_ message: String) {
     Swift.print("🛠 [CharacterDetailVM] \(message)")
 }
 #else
-fileprivate func characterDetailDebugPrint(_ message: String) { }
+private func characterDetailDebugPrint(_ message: String) { }
 #endif
 
 @MainActor

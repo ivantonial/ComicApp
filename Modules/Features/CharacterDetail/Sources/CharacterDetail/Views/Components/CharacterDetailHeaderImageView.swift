@@ -1,4 +1,3 @@
-
 //
 //  CharacterDetailHeaderImageView.swift
 //  CharacterDetail
@@ -6,8 +5,8 @@
 //  Created by Ivan Tonial IP.TV on 10/10/25.
 //
 
-import DesignSystem
 import ComicVineAPI
+import DesignSystem
 import SwiftUI
 
 struct CharacterDetailHeaderImageView: View {

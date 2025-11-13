@@ -33,14 +33,12 @@ extension ComicCardModel: ContentCardConvertible {
             title: title,
             subtitle: issueNumber != nil ? "Issue #\(issueNumber!)" : nil,
             imageURL: imageURL,
-            aspectRatio: 3.0/4.0, //ContentCardModel.AspectRatio(width: 3, height: 4), // portrait
+            aspectRatio: 3.0 / 4.0,
             badge: coverDate != nil ? ContentCardModel.BadgeModel(
                 icon: "calendar",
                 text: formatDate(coverDate!),
                 color: .blue
-            ) : nil//,
-//            showGradient: true,
-//            contentAlignment: .bottomLeading
+            ) : nil
         )
     }
 

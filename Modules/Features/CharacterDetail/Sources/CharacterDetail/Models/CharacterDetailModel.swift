@@ -5,9 +5,9 @@
 //  Created by Ivan Tonial IP.TV on 10/10/25.
 //
 
+import ComicVineAPI
 import DesignSystem
 import Foundation
-import ComicVineAPI
 import SwiftUI
 
 // MARK: - Main Detail Model
@@ -136,7 +136,6 @@ public struct CharacterRelatedContentModel: Sendable {
         !recentComics.isEmpty || !recentSeries.isEmpty
     }
 }
-
 
 // MARK: - Related Item Model
 public struct RelatedItemModel: Sendable, Identifiable {

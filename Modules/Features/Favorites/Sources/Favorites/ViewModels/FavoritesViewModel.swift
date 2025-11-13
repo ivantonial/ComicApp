@@ -6,9 +6,9 @@
 //
 
 import Combine
+import ComicVineAPI
 import Core
 import Foundation
-import ComicVineAPI
 import SwiftUI
 
 @MainActor

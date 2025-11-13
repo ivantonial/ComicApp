@@ -5,13 +5,13 @@
 //  Created by Ivan Tonial IP.TV on 07/10/25.
 //
 
+import Cache
+import Combine
+import ComicVineAPI
 import Core
 import Foundation
-import ComicVineAPI
-import SwiftUI
-import Combine
 import Networking
-import Cache
+import SwiftUI
 
 @MainActor
 public final class CharacterListViewModel: ObservableObject {
