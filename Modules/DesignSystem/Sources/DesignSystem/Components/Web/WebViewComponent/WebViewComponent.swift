@@ -7,6 +7,7 @@
 
 import SwiftUI
 import WebKit
+import UIKit
 
 /// Componente reutilizável para exibir conteúdo HTML
 /// com tema escuro, apenas scroll vertical e título opcional.
@@ -16,7 +17,203 @@ public struct WebViewComponent: UIViewRepresentable {
     /// Compartilha um único processPool para reduzir consumo de memória e churn de processos.
     private static let sharedProcessPool = WKProcessPool()
 
+    // MARK: - CSS Base
+
+    /// CSS base estático. Valores dinâmicos (tamanho da fonte e cor do texto)
+    /// são aplicados via CSS custom properties (`--font-size`, `--text-color`)
+    /// definidas inline no elemento `<body>`.
+    private static let baseCSS: String = """
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        html {
+            width: 100%;
+            overflow-x: hidden;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-size: var(--font-size);
+            color: var(--text-color);
+            background-color: transparent;
+            line-height: 1.6;
+            padding: 16px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            word-break: normal;
+            -webkit-hyphens: none;
+            hyphens: none;
+            max-width: 100%;
+            width: 100%;
+            overflow-x: hidden;
+        }
+
+        .content-wrapper {
+            max-width: 100%;
+            width: 100%;
+            overflow-x: hidden;
+        }
+
+        .page-title {
+            text-align: center;
+            margin-bottom: 24px;
+            color: var(--text-color);
+            font-size: calc(var(--font-size) + 12px);
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            color: #FF0000;
+            margin-top: 16px;
+            margin-bottom: 12px;
+            font-weight: 800;
+            max-width: 100%;
+            clear: both;
+        }
+
+        p {
+            margin-bottom: 12px;
+        }
+
+        a {
+            color: #FF0000;
+            text-decoration: underline;
+            display: inline;
+        }
+
+        ul, ol {
+            margin-left: 20px;
+            margin-bottom: 12px;
+            max-width: calc(100% - 20px);
+        }
+
+        li {
+            margin-bottom: 6px;
+        }
+
+        /* TODAS as imagens ocupam a largura do conteúdo */
+        img {
+            display: block;
+            width: 100% !important;
+            max-width: 100% !important;
+            height: auto !important;
+            margin: 12px 0;
+            object-fit: contain;
+        }
+
+        table {
+            max-width: 100%;
+            width: 100%;
+            overflow-x: auto;
+            display: block;
+            border-collapse: collapse;
+            margin: 12px 0;
+        }
+
+        td, th {
+            padding: 8px;
+            border: 1px solid #444;
+        }
+
+        blockquote {
+            border-left: 3px solid #FF0000;
+            padding-left: 16px;
+            margin: 16px 0;
+            color: #999;
+            max-width: calc(100% - 19px);
+        }
+
+        /* Figuras sempre em bloco, largura total, sem float */
+        figure {
+            margin: 16px 0;
+            text-align: center;
+            max-width: 100%;
+            width: 100% !important;
+            float: none !important;
+        }
+
+        /* Mantém um pequeno destaque para figuras logo após títulos, mas ainda full width */
+        h1 + figure,
+        h2 + figure,
+        h3 + figure {
+            margin-top: 16px;
+            margin-bottom: 20px;
+        }
+
+        figure[data-align],
+        figure[data-align="right"],
+        figure[data-align="Right"],
+        figure[data-align="left"],
+        figure[data-align="Left"] {
+            float: none !important;
+            margin: 16px 0;
+            max-width: 100%;
+            width: 100% !important;
+        }
+
+        figure img {
+            width: 100% !important;
+            height: auto !important;
+            display: block;
+        }
+
+        figcaption {
+            font-size: calc(var(--font-size) - 2px);
+            color: #999;
+            margin-top: 8px;
+        }
+
+        strong, b {
+            font-weight: 700;
+            color: var(--text-color);
+        }
+
+        em, i {
+            font-style: italic;
+        }
+
+        code {
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            background-color: #1a1a1a;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-size: calc(var(--font-size) - 2px);
+        }
+
+        pre {
+            background-color: #1a1a1a;
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 12px 0;
+            max-width: 100%;
+        }
+
+        pre code {
+            background-color: transparent;
+            padding: 0;
+        }
+
+        script,
+        iframe {
+            display: none !important;
+        }
+
+        *:not(pre) {
+            max-width: 100%;
+        }
+    </style>
+    """
+
     // MARK: - Inputs
+
     private let htmlContent: String
     private let title: String?
     private let baseURL: URL?
@@ -94,7 +291,11 @@ public struct WebViewComponent: UIViewRepresentable {
           promoteLazy();
         })();
         """
-        let userScript = WKUserScript(source: lazyImagesJS, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
+        let userScript = WKUserScript(
+            source: lazyImagesJS,
+            injectionTime: .atDocumentEnd,
+            forMainFrameOnly: true
+        )
         configuration.userContentController.addUserScript(userScript)
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
@@ -200,10 +401,8 @@ public struct WebViewComponent: UIViewRepresentable {
     // MARK: - HTML + CSS
 
     private func createStyledHTML(from raw: String, maxImages: Int) -> String {
-        // Pré-processa: remove scripts/iframes, promove imagens lazy e força https
         let sanitized = sanitizeHTML(raw, maxImages: maxImages)
 
-        // Cabeçalho com o título centralizado (se houver)
         let headerHTML: String
         if let title, !title.isEmpty {
             headerHTML = """
@@ -213,154 +412,6 @@ public struct WebViewComponent: UIViewRepresentable {
             headerHTML = ""
         }
 
-        let css = """
-        <style>
-            * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-                -webkit-text-size-adjust: 100%;
-            }
-
-            html { width: 100%; overflow-x: hidden; }
-
-            body {
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-                font-size: \(fontSize)px;
-                color: \(textColor);
-                background-color: transparent;
-                line-height: 1.6;
-                padding: 16px;
-                word-wrap: break-word;
-                overflow-wrap: break-word;
-                word-break: normal;
-                -webkit-hyphens: none;
-                hyphens: none;
-                max-width: 100%;
-                width: 100%;
-                overflow-x: hidden;
-            }
-
-            .content-wrapper { max-width: 100%; width: 100%; overflow-x: hidden; }
-
-            .page-title {
-                text-align: center;
-                margin-bottom: 24px;
-                color: \(textColor);
-                font-size: \(fontSize + 12)px;
-                font-weight: 900;
-                letter-spacing: 0.5px;
-                text-transform: uppercase;
-            }
-
-            h1, h2, h3, h4, h5, h6 {
-                color: #FF0000;
-                margin-top: 16px;
-                margin-bottom: 12px;
-                font-weight: 800;
-                max-width: 100%;
-                clear: both;
-            }
-
-            p { margin-bottom: 12px; }
-
-            a { color: #FF0000; text-decoration: underline; display: inline; }
-
-            ul, ol { margin-left: 20px; margin-bottom: 12px; max-width: calc(100% - 20px); }
-            li { margin-bottom: 6px; }
-
-            /* TODAS as imagens ocupam a largura do conteúdo */
-            img {
-                display: block;
-                width: 100% !important;
-                max-width: 100% !important;
-                height: auto !important;
-                margin: 12px 0;
-                object-fit: contain;
-            }
-
-            table {
-                max-width: 100%;
-                width: 100%;
-                overflow-x: auto;
-                display: block;
-                border-collapse: collapse;
-                margin: 12px 0;
-            }
-
-            td, th { padding: 8px; border: 1px solid #444; }
-
-            blockquote {
-                border-left: 3px solid #FF0000;
-                padding-left: 16px;
-                margin: 16px 0;
-                color: #999;
-                max-width: calc(100% - 19px);
-            }
-
-            /* Figuras sempre em bloco, largura total, sem float */
-            figure {
-                margin: 16px 0;
-                text-align: center;
-                max-width: 100%;
-                width: 100% !important;
-                float: none !important;
-            }
-
-            /* Mantém um pequeno destaque para figuras logo após títulos, mas ainda full width */
-            h1 + figure, h2 + figure, h3 + figure {
-                margin-top: 16px;
-                margin-bottom: 20px;
-            }
-
-            figure[data-align], figure[data-align="right"], figure[data-align="Right"],
-            figure[data-align="left"], figure[data-align="Left"] {
-                float: none !important;
-                margin: 16px 0;
-                max-width: 100%;
-                width: 100% !important;
-            }
-
-            figure img {
-                width: 100% !important;
-                height: auto !important;
-                display: block;
-            }
-
-            figcaption {
-                font-size: \(fontSize - 2)px;
-                color: #999;
-                margin-top: 8px;
-            }
-
-            strong, b { font-weight: 700; color: \(textColor); }
-            em, i { font-style: italic; }
-
-            code {
-                font-family: 'SF Mono', Monaco, 'Courier New', monospace;
-                background-color: #1a1a1a;
-                padding: 2px 4px;
-                border-radius: 3px;
-                font-size: \(fontSize - 2)px;
-            }
-
-            pre {
-                background-color: #1a1a1a;
-                padding: 12px;
-                border-radius: 6px;
-                overflow-x: auto;
-                margin: 12px 0;
-                max-width: 100%;
-            }
-
-            pre code { background-color: transparent; padding: 0; }
-
-            script, iframe { display: none !important; }
-
-            *:not(pre) { max-width: 100%; }
-        </style>
-        """
-
         return """
         <!DOCTYPE html>
         <html lang="en">
@@ -368,9 +419,9 @@ public struct WebViewComponent: UIViewRepresentable {
             <meta charset="UTF-8">
             <meta name="viewport"
                   content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-            \(css)
+            \(Self.baseCSS)
         </head>
-        <body>
+        <body style="--font-size: \(fontSize)px; --text-color: \(textColor);">
             <div class="content-wrapper">
                 \(headerHTML)
                 \(sanitized)
@@ -383,76 +434,154 @@ public struct WebViewComponent: UIViewRepresentable {
     // MARK: - Sanitização simples de HTML
 
     private func sanitizeHTML(_ raw: String, maxImages: Int) -> String {
-        // 1) remove <script> e <iframe>
-        var cleaned = raw
+        let withoutScripts = removeScriptsAndIframes(from: raw)
+        let withLazyPromoted = promoteLazyAttributes(in: withoutScripts)
+        let withFigures = injectImagesIntoFigures(in: withLazyPromoted)
+        let withHTTPS = forceHTTPS(in: withFigures)
+        return limitImages(in: withHTTPS, maxImages: maxImages)
+    }
+
+    private func removeScriptsAndIframes(from html: String) -> String {
+        var cleaned = html
         let patternsToRemove = [
             "<script[^>]*>[\\s\\S]*?</script>",
             "<iframe[^>]*>[\\s\\S]*?</iframe>"
         ]
+
         for pattern in patternsToRemove {
-            if let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) {
-                let range = NSRange(location: 0, length: (cleaned as NSString).length)
-                cleaned = regex.stringByReplacingMatches(in: cleaned, options: [], range: range, withTemplate: "")
+            guard let regex = try? NSRegularExpression(
+                pattern: pattern,
+                options: [.caseInsensitive]
+            ) else {
+                continue
             }
+
+            let range = NSRange(location: 0, length: (cleaned as NSString).length)
+            cleaned = regex.stringByReplacingMatches(
+                in: cleaned,
+                options: [],
+                range: range,
+                withTemplate: ""
+            )
         }
 
-        // 2) promover lazy: data-src/srcset -> src/srcset
+        return cleaned
+    }
+
+    private func promoteLazyAttributes(in html: String) -> String {
+        var cleaned = html
         let replacements: [(String, String)] = [
             ("\\sdata-srcset=", " srcset="),
             ("\\sdata-src=", " src=")
         ]
+
         for (pattern, replacement) in replacements {
-            if let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) {
-                let range = NSRange(location: 0, length: (cleaned as NSString).length)
-                cleaned = regex.stringByReplacingMatches(in: cleaned, options: [], range: range, withTemplate: replacement)
+            guard let regex = try? NSRegularExpression(
+                pattern: pattern,
+                options: [.caseInsensitive]
+            ) else {
+                continue
             }
-        }
 
-        // 3) figuras com data-img-src sem <img> interno -> insere <img src="…">
-        if let figureRegex = try? NSRegularExpression(pattern: "<figure([^>]*)data-img-src=\"([^\"]+)\"([^>]*)>([\\s\\S]*?)</figure>", options: [.caseInsensitive]) {
-            let ns = cleaned as NSString
-            let matches = figureRegex.matches(in: cleaned, options: [], range: NSRange(location: 0, length: ns.length))
-            var output = cleaned
-            for m in matches.reversed() {
-                let fullRange = m.range(at: 0)
-                let before = (output as NSString)
-                let fragment = before.substring(with: fullRange)
-                if fragment.range(of: "<img", options: .caseInsensitive) == nil,
-                   m.numberOfRanges >= 3 {
-                    let src = (before.substring(with: m.range(at: 2)) as String)
-                    if let firstGT = fragment.firstIndex(of: ">") {
-                        let prefix = fragment[..<firstGT]
-                        let suffix = fragment[firstGT...]
-                        let injected = "\(prefix)><img src=\"\(src)\" style=\"width:100%;height:auto;display:block;\">\(suffix.dropFirst())"
-                        output = before.replacingCharacters(in: fullRange, with: injected)
-                    }
-                }
-                cleaned = output
-            }
-        }
-
-        // 4) força https
-        if let httpRegex = try? NSRegularExpression(pattern: "http://", options: []) {
             let range = NSRange(location: 0, length: (cleaned as NSString).length)
-            cleaned = httpRegex.stringByReplacingMatches(in: cleaned, options: [], range: range, withTemplate: "https://")
-        }
-
-        // 5) limita a quantidade de <img>, se necessário
-        if maxImages < Int.max,
-           let regex = try? NSRegularExpression(pattern: "<img\\b[^>]*>", options: [.caseInsensitive]) {
-            let ns = cleaned as NSString
-            let matches = regex.matches(in: cleaned, options: [], range: NSRange(location: 0, length: ns.length))
-            if matches.count > maxImages {
-                let toRemove = matches.dropFirst(maxImages)
-                var mutable = ns
-                for match in toRemove.reversed() {
-                    mutable = mutable.replacingCharacters(in: match.range, with: "") as NSString
-                }
-                cleaned = String(mutable)
-            }
+            cleaned = regex.stringByReplacingMatches(
+                in: cleaned,
+                options: [],
+                range: range,
+                withTemplate: replacement
+            )
         }
 
         return cleaned
+    }
+
+    private func injectImagesIntoFigures(in html: String) -> String {
+        guard let figureRegex = try? NSRegularExpression(
+            pattern: "<figure([^>]*)data-img-src=\"([^\"]+)\"([^>]*)>([\\s\\S]*?)</figure>",
+            options: [.caseInsensitive]
+        ) else {
+            return html
+        }
+
+        let nsHTML = html as NSString
+        let matches = figureRegex.matches(
+            in: html,
+            options: [],
+            range: NSRange(location: 0, length: nsHTML.length)
+        )
+
+        var result = html as NSString
+
+        for match in matches.reversed() {
+            let fullRange = match.range(at: 0)
+            let fragment = result.substring(with: fullRange)
+
+            // Se já existe <img> dentro do figure, não injeta nada
+            if fragment.range(of: "<img", options: .caseInsensitive) != nil {
+                continue
+            }
+
+            guard match.numberOfRanges >= 3 else { continue }
+            let srcRange = match.range(at: 2)
+            guard srcRange.location != NSNotFound else { continue }
+
+            let src = result.substring(with: srcRange)
+
+            guard let firstGTRange = fragment.range(of: ">") else { continue }
+
+            let prefix = String(fragment[..<firstGTRange.upperBound])
+            let suffix = String(fragment[firstGTRange.upperBound...])
+
+            let injectedImage = "<img src=\"\(src)\" style=\"width:100%;height:auto;display:block;\">"
+            let newFragment = prefix + injectedImage + suffix
+
+            result = result.replacingCharacters(in: fullRange, with: newFragment) as NSString
+        }
+
+        return String(result)
+    }
+
+    private func forceHTTPS(in html: String) -> String {
+        guard let httpRegex = try? NSRegularExpression(pattern: "http://", options: []) else {
+            return html
+        }
+
+        let range = NSRange(location: 0, length: (html as NSString).length)
+
+        return httpRegex.stringByReplacingMatches(
+            in: html,
+            options: [],
+            range: range,
+            withTemplate: "https://"
+        )
+    }
+
+    private func limitImages(in html: String, maxImages: Int) -> String {
+        guard maxImages < Int.max,
+              let regex = try? NSRegularExpression(
+                pattern: "<img\\b[^>]*>",
+                options: [.caseInsensitive]
+              ) else {
+            return html
+        }
+
+        let nsHTML = html as NSString
+        let matches = regex.matches(
+            in: html,
+            options: [],
+            range: NSRange(location: 0, length: nsHTML.length)
+        )
+
+        guard matches.count > maxImages else { return html }
+
+        let toRemove = matches.dropFirst(maxImages)
+        var mutable = nsHTML
+
+        for match in toRemove.reversed() {
+            mutable = mutable.replacingCharacters(in: match.range, with: "") as NSString
+        }
+
+        return String(mutable)
     }
 
     private func escapeHTML(_ string: String) -> String {

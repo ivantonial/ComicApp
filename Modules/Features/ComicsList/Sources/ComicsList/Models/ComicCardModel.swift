@@ -31,24 +31,38 @@ extension ComicCardModel: ContentCardConvertible {
         ContentCardModel(
             id: id,
             title: title,
-            subtitle: issueNumber != nil ? "Issue #\(issueNumber!)" : nil,
+            subtitle: issueNumber.map { "Issue #\($0)" },
             imageURL: imageURL,
             aspectRatio: 3.0 / 4.0,
-            badge: coverDate != nil ? ContentCardModel.BadgeModel(
-                icon: "calendar",
-                text: formatDate(coverDate!),
-                color: .blue
-            ) : nil
+            badge: coverDate.map {
+                ContentCardModel.BadgeModel(
+                    icon: "calendar",
+                    text: formatDate($0),
+                    color: .blue
+                )
+            }
         )
     }
 
     private func formatDate(_ dateString: String) -> String {
-        // Implementação simplificada - seria melhor com DateFormatter
         let components = dateString.split(separator: "-")
         guard components.count >= 2 else { return dateString }
 
-        let months = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        let months = [
+            "",
+            "Jan",
+            "Feb",
+            "Mar",
+            "Apr",
+            "May",
+            "Jun",
+            "Jul",
+            "Aug",
+            "Sep",
+            "Oct",
+            "Nov",
+            "Dec"
+        ]
 
         if let monthIndex = Int(components[1]),
            monthIndex > 0 && monthIndex <= 12 {

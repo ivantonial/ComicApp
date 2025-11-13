@@ -31,7 +31,7 @@ public struct FavoriteCardView: View {
     }
 
     public var body: some View {
-        _ = print("🔧 [FavoriteCardView] Rendering card for: \(character.name)")
+        let _ = print("🔧 [FavoriteCardView] Rendering card for: \(character.name)")
         ZStack(alignment: .topTrailing) {
             // Card principal - passa o onTap diretamente para o ContentCardComponent
             ContentCardComponent(

@@ -34,7 +34,7 @@ public struct FavoritesView: View {
 
     // MARK: - Body
     public var body: some View {
-        _ = print("📱 [FavoritesView] Rendering with \(viewModel.favoriteCharacters.count) favorites")
+        let _ = print("📱 [FavoritesView] Rendering with \(viewModel.favoriteCharacters.count) favorites")
 
         ZStack {
             Color.black.ignoresSafeArea()
