@@ -12,6 +12,8 @@ public struct PrimaryButtonComponent: View {
     public let isEnabled: Bool
     public let action: () -> Void
 
+    @ObservedObject private var themeManager = ThemeManager.shared
+
     public init(title: String, isEnabled: Bool = true, action: @escaping () -> Void) {
         self.title = title
         self.isEnabled = isEnabled
@@ -22,10 +24,14 @@ public struct PrimaryButtonComponent: View {
         Button(action: action) {
             Text(title)
                 .font(.headline)
-                .foregroundColor(.white)
+                .foregroundColor(themeManager.currentTheme.invertedText)
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(isEnabled ? Color.red : Color.gray)
+                .background(
+                    isEnabled
+                        ? themeManager.currentTheme.buttonBackground
+                        : themeManager.currentTheme.disabledBackground
+                )
                 .cornerRadius(12)
         }
         .disabled(!isEnabled)

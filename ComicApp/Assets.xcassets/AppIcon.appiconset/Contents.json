@@ -1,6 +1,7 @@
 {
   "images" : [
     {
+      "filename" : "comicapp_appicon_any_fullbleed_v2_1024.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -12,6 +13,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "comicapp_appicon_dark_fullbleed_v2_1024.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -23,6 +25,7 @@
           "value" : "tinted"
         }
       ],
+      "filename" : "comicapp_appicon_tinted_fullbleed_v2_1024.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"

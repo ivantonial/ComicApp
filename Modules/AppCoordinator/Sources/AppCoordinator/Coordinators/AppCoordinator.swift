@@ -7,6 +7,7 @@ import CharacterList
 import ComicsList
 import ComicVineAPI
 import Core
+import DesignSystem
 import Favorites
 import Networking
 import Search
@@ -29,6 +30,9 @@ public final class AppCoordinator: ObservableObject {
     private let comicVineService: ComicVineAPIService
     private let persistenceManager: PersistenceManager
     private let favoritesService: FavoritesService
+
+    // MARK: - Theme Manager
+    private let themeManager = ThemeManager.shared
 
     // MARK: - View Models (mantém estado entre navegações)
     private var searchViewModel: SearchViewModel?
@@ -56,6 +60,9 @@ public final class AppCoordinator: ObservableObject {
         self.comicVineService = ComicVineAPIService(networkService: networkService, apiKey: apiKey)
         self.persistenceManager = PersistenceManager()
         self.favoritesService = FavoritesService(persistenceManager: persistenceManager)
+
+        // Inicializa o tema
+        setupTheme()
     }
 
     // MARK: - Private Bindings Helpers
@@ -92,6 +99,13 @@ public final class AppCoordinator: ObservableObject {
             get: { self.settingsPath },
             set: { self.settingsPath = $0 }
         )
+    }
+
+    // MARK: - Theme Setup
+    private func setupTheme() {
+        // O ThemeManager já carrega o tema salvo automaticamente na inicialização
+        // Esta chamada garante que o singleton seja inicializado no momento certo
+        _ = ThemeManager.shared
     }
 
     // MARK: - Main View

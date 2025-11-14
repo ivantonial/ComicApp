@@ -5,27 +5,33 @@
 //  Created by Ivan Tonial IP.TV on 09/10/25.
 //
 
+import Cache
+import Combine
 import Core
+import DesignSystem
 import Foundation
 import SwiftUI
+import UserNotifications
 
 @MainActor
 public final class SettingsViewModel: ObservableObject {
     // MARK: - Published Properties
-    @Published public var isNotificationsEnabled = false
-    @Published public var isDarkModeEnabled = true
-    @Published public var isAutoPlayVideosEnabled = false
+    @Published public var isNotificationsEnabled: Bool = false
+    @Published public var isDarkModeEnabled: Bool = true
+    @Published public var isAutoPlayVideosEnabled: Bool = false
     @Published public var imageQuality: ImageQuality = .high
     @Published public var cacheSize: String = "Calculating..."
-    @Published public var appVersion: String = ""
-    @Published public var buildNumber: String = ""
-    @Published public var showingClearCacheAlert = false
-    @Published public var showingResetAlert = false
+    @Published public var appVersion: String = "-"
+    @Published public var buildNumber: String = "-"
+    @Published public var showingClearCacheAlert: Bool = false
+    @Published public var showingResetAlert: Bool = false
     @Published public var apiStatus: APIStatus = .checking
 
     // MARK: - Private Properties
     private let cacheManager: CacheManagerProtocol?
     private let userDefaults = UserDefaults.standard
+    private let themeManager = ThemeManager.shared
+    private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Computed Properties
     public var notificationStatusText: String {
@@ -37,23 +43,28 @@ public final class SettingsViewModel: ObservableObject {
     // MARK: - Initialization
     public init(cacheManager: CacheManagerProtocol? = nil) {
         self.cacheManager = cacheManager
+
+        // Sincroniza com o ThemeManager desde o início
+        self.isDarkModeEnabled = themeManager.isDarkMode
+
         loadSettings()
         loadAppInfo()
         calculateCacheSize()
         checkAPIStatus()
+        setupThemeObserver()
     }
 
     // MARK: - Public Methods
     public func toggleNotifications() {
-        isNotificationsEnabled.toggle()
+        // Não inverte aqui, o toggle já fez isso
         saveSettings()
         if isNotificationsEnabled { requestNotificationPermission() }
     }
 
-    public func toggleDarkMode() {
-        isDarkModeEnabled.toggle()
+    public func applyTheme(isDark: Bool) {
+        let newTheme: ThemeType = isDark ? .dark : .light
+        themeManager.setTheme(newTheme)
         saveSettings()
-        applyTheme()
     }
 
     public func toggleAutoPlayVideos() {
@@ -84,11 +95,13 @@ public final class SettingsViewModel: ObservableObject {
         imageQuality = .high
 
         userDefaults.removeObject(forKey: "notifications_enabled")
-        userDefaults.removeObject(forKey: "dark_mode_enabled")
         userDefaults.removeObject(forKey: "auto_play_videos")
         userDefaults.removeObject(forKey: "image_quality")
         userDefaults.removeObject(forKey: "FavoriteCharacters")
         userDefaults.removeObject(forKey: "RecentSearches")
+
+        // Reseta o tema para o padrão (dark)
+        themeManager.setTheme(.dark)
 
         let feedback = UINotificationFeedbackGenerator()
         feedback.notificationOccurred(.warning)
@@ -107,26 +120,26 @@ public final class SettingsViewModel: ObservableObject {
     }
 
     public func openPrivacyPolicy() {
-        if let url = URL(string: "https://marvelapp.com/privacy") {
+        if let url = URL(string: "https://comicapp.com/privacy") {
             UIApplication.shared.open(url)
         }
     }
 
     public func openTermsOfService() {
-        if let url = URL(string: "https://marvelapp.com/terms") {
+        if let url = URL(string: "https://comicapp.com/terms") {
             UIApplication.shared.open(url)
         }
     }
 
     public func contactSupport() {
-        if let url = URL(string: "mailto:support@marvelapp.com") {
+        if let url = URL(string: "mailto:support@comicapp.com") {
             UIApplication.shared.open(url)
         }
     }
 
     public func reportBug() {
-        let email = "bugs@marvelapp.com"
-        let subject = "Bug Report - MarvelApp \(appVersion)"
+        let email = "bugs@comicapp.com"
+        let subject = "Bug Report - ComicApp \(appVersion)"
         let body = """
         ---
         App Version: \(appVersion)
@@ -145,7 +158,10 @@ public final class SettingsViewModel: ObservableObject {
     // MARK: - Private Methods
     private func loadSettings() {
         isNotificationsEnabled = userDefaults.bool(forKey: "notifications_enabled")
-        isDarkModeEnabled = userDefaults.object(forKey: "dark_mode_enabled") as? Bool ?? true
+
+        // Sempre sincroniza com o ThemeManager
+        isDarkModeEnabled = themeManager.isDarkMode
+
         isAutoPlayVideosEnabled = userDefaults.bool(forKey: "auto_play_videos")
 
         if let qualityRaw = userDefaults.string(forKey: "image_quality"),
@@ -156,7 +172,6 @@ public final class SettingsViewModel: ObservableObject {
 
     private func saveSettings() {
         userDefaults.set(isNotificationsEnabled, forKey: "notifications_enabled")
-        userDefaults.set(isDarkModeEnabled, forKey: "dark_mode_enabled")
         userDefaults.set(isAutoPlayVideosEnabled, forKey: "auto_play_videos")
         userDefaults.set(imageQuality.rawValue, forKey: "image_quality")
     }
@@ -185,11 +200,9 @@ public final class SettingsViewModel: ObservableObject {
             apiStatus = .checking
             try? await Task.sleep(nanoseconds: 2_000_000_000)
 
-            let publicKey = Bundle.main.object(forInfoDictionaryKey: "MARVEL_PUBLIC_KEY") as? String ?? ""
-            let privateKey = Bundle.main.object(forInfoDictionaryKey: "MARVEL_PRIVATE_KEY") as? String ?? ""
+            let apiKey = Bundle.main.object(forInfoDictionaryKey: "COMICVINE_API_KEY") as? String ?? ""
 
-            if !publicKey.isEmpty && !privateKey.isEmpty &&
-                publicKey != "YOUR_PUBLIC_KEY_HERE" && privateKey != "YOUR_PRIVATE_KEY_HERE" {
+            if !apiKey.isEmpty && apiKey != "YOUR_API_KEY_HERE" {
                 apiStatus = .online
             } else {
                 apiStatus = .offline
@@ -213,9 +226,17 @@ public final class SettingsViewModel: ObservableObject {
         }
     }
 
-    private func applyTheme() {
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-            windowScene.windows.forEach { $0.overrideUserInterfaceStyle = isDarkModeEnabled ? .dark : .light }
-        }
+    private func setupThemeObserver() {
+        // Observa mudanças no tema para manter a sincronização
+        themeManager.$currentThemeType
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] themeType in
+                guard let self = self else { return }
+                let newValue = themeType == .dark
+                if self.isDarkModeEnabled != newValue {
+                    self.isDarkModeEnabled = newValue
+                }
+            }
+            .store(in: &cancellables)
     }
 }

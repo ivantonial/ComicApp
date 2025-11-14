@@ -87,8 +87,8 @@ public struct SettingsView: View {
                         .foregroundColor(.indigo)
                 }
             }
-            .onChange(of: viewModel.isDarkModeEnabled) { _ in
-                viewModel.toggleDarkMode()
+            .onChange(of: viewModel.isDarkModeEnabled) { newValue in
+                viewModel.applyTheme(isDark: newValue)
             }
         } header: {
             SettingsSectionHeaderView(title: "General", systemImage: "gearshape.fill", color: .secondary)
