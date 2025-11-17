@@ -14,7 +14,10 @@ import SwiftUI
 
 public struct SearchView: View {
     @StateObject private var viewModel: SearchViewModel
+    @ObservedObject private var themeManager = ThemeManager.shared
     @FocusState private var isSearchFieldFocused: Bool
+    @Namespace private var searchNamespace
+
     private let onCharacterSelected: ((Character) -> Void)?
     private let onComicSelected: ((Comic) -> Void)?
 
@@ -30,7 +33,7 @@ public struct SearchView: View {
 
     public var body: some View {
         ZStack {
-            Color.black
+            themeManager.currentTheme.primaryBackground
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -40,13 +43,14 @@ public struct SearchView: View {
                 // Search Header
                 searchHeader
 
-                // Filter Pills
+                // Filter Pills - Sem transição, sempre no mesmo lugar
                 if viewModel.hasResults {
                     filterSection
+                        .animation(nil, value: viewModel.searchType) // Desabilita animação na mudança de tipo
                 }
 
                 // Main Content
-                mainContent
+                contentView
             }
         }
         .navigationTitle("Search")
@@ -61,7 +65,9 @@ public struct SearchView: View {
         HStack(spacing: 0) {
             ForEach(SearchType.allCases, id: \.self) { type in
                 Button(action: {
-                    viewModel.switchSearchType(type)
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        viewModel.switchSearchType(type)
+                    }
                 }) {
                     VStack(spacing: 4) {
                         Image(systemName: type.icon)
@@ -72,42 +78,285 @@ public struct SearchView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .foregroundColor(viewModel.searchType == type ? .black : .white)
+                    .foregroundColor(
+                        viewModel.searchType == type ?
+                        themeManager.currentTheme.primaryBackground :
+                        themeManager.currentTheme.primaryText
+                    )
                     .background(
                         viewModel.searchType == type ?
-                        Color.red : Color.clear
+                        themeManager.currentTheme.primaryAccent :
+                        Color.clear
                     )
                 }
             }
         }
-        .background(Color.white.opacity(0.1))
+        .background(themeManager.currentTheme.secondaryBackground)
         .cornerRadius(10)
         .padding(.horizontal)
         .padding(.top, 10)
     }
 
-    // MARK: - Main Content Router
-    @ViewBuilder
-    private var mainContent: some View {
-        if viewModel.isSearching {
-            loadingView
-        } else if viewModel.hasResults {
-            resultsView
-        } else if !viewModel.searchText.isEmpty {
-            noResultsView
-        } else {
-            defaultView
+    // MARK: - Search Header
+    private var searchHeader: some View {
+        VStack(spacing: 0) {
+            // Search Bar
+            HStack(spacing: 12) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(themeManager.currentTheme.tertiaryText)
+                    .font(.system(size: 18))
+
+                TextField("Search Comics characters...", text: $viewModel.searchText)
+                    .foregroundColor(themeManager.currentTheme.primaryText)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                    .submitLabel(.search)
+                    .focused($isSearchFieldFocused)
+                    .onSubmit {
+                        isSearchFieldFocused = false
+                        viewModel.search()
+                    }
+
+                if !viewModel.searchText.isEmpty {
+                    Button(action: {
+                        viewModel.clearSearch()
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(themeManager.currentTheme.tertiaryText)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(themeManager.currentTheme.searchBarBackground)
+            .cornerRadius(10)
+            .padding(.horizontal)
+            .padding(.vertical, 10)
+
+            // Suggestions
+            if !viewModel.suggestions.isEmpty {
+                suggestionsView
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .top).combined(with: .opacity),
+                        removal: .move(edge: .top).combined(with: .opacity)
+                    ))
+            }
+        }
+        .background(themeManager.currentTheme.primaryBackground)
+    }
+
+    // MARK: - Suggestions View
+    private var suggestionsView: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(Array(viewModel.suggestions.enumerated()), id: \.offset) { _, suggestion in
+                    Button(action: {
+                        isSearchFieldFocused = false
+                        viewModel.selectSuggestion(suggestion)
+                    }) {
+                        Text(suggestion)
+                            .font(.caption)
+                            .foregroundColor(themeManager.currentTheme.invertedText)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(
+                                Capsule()
+                                    .fill(themeManager.currentTheme.primaryAccent.opacity(0.8))
+                            )
+                    }
+                }
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 10)
         }
     }
 
-    // MARK: - Results View Router
+    // MARK: - Filter Section (CORRIGIDO - sem transições)
+    private var filterSection: some View {
+        VStack(spacing: 10) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(viewModel.currentFilters, id: \.self) { filter in
+                        FilterChip(
+                            title: filter.title,
+                            icon: filter.icon,
+                            isSelected: viewModel.selectedFilter == filter,
+                            action: {
+                                // Animação apenas para a seleção do filtro, não para a entrada
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    viewModel.updateFilter(filter)
+                                }
+                            }
+                        )
+                    }
+                }
+                .padding(.horizontal)
+            }
+        }
+        .padding(.vertical, 5)
+        .background(themeManager.currentTheme.primaryBackground)
+        .id("filterSection_\(viewModel.searchType)") // ID único por tipo para forçar recriação sem animação
+    }
+
+    // MARK: - Content View
     @ViewBuilder
-    private var resultsView: some View {
-        switch viewModel.searchType {
-        case .characters:
-            characterResultsView
-        case .comics:
-            comicResultsView
+    private var contentView: some View {
+        if viewModel.isSearching {
+            loadingView
+                .transition(.opacity)
+        } else if viewModel.hasResults {
+            // Container estável para resultados
+            GeometryReader { geometry in
+                Group {
+                    switch viewModel.searchType {
+                    case .characters:
+                        characterResultsView
+                            .frame(width: geometry.size.width, height: geometry.size.height)
+                            .id("characters_results")
+                    case .comics:
+                        comicResultsView
+                            .frame(width: geometry.size.width, height: geometry.size.height)
+                            .id("comics_results")
+                    }
+                }
+                .animation(.easeInOut(duration: 0.25), value: viewModel.searchType)
+            }
+        } else if !viewModel.searchText.isEmpty {
+            noResultsView
+                .transition(.opacity)
+        } else {
+            defaultView
+                .transition(.opacity)
+        }
+    }
+
+    // MARK: - Loading View
+    private var loadingView: some View {
+        VStack {
+            Spacer()
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle(tint: themeManager.currentTheme.primaryAccent))
+                .scaleEffect(1.5)
+            Text("Searching...")
+                .font(.caption)
+                .foregroundColor(themeManager.currentTheme.secondaryText)
+                .padding(.top)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - No Results View
+    private var noResultsView: some View {
+        VStack(spacing: 20) {
+            Spacer()
+
+            Image(systemName: "magnifyingglass.circle")
+                .font(.system(size: 80))
+                .foregroundColor(themeManager.currentTheme.tertiaryText)
+
+            Text("No Results Found")
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(themeManager.currentTheme.primaryText)
+
+            Text("Try searching with different keywords")
+                .font(.body)
+                .foregroundColor(themeManager.currentTheme.secondaryText)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Default View (Recent Searches)
+    private var defaultView: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                // Recent Searches
+                if !viewModel.recentSearches.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Text("Recent Searches")
+                                .font(.headline)
+                                .foregroundColor(themeManager.currentTheme.primaryText)
+
+                            Spacer()
+
+                            Button("Clear") {
+                                viewModel.clearRecentSearches()
+                            }
+                            .font(.caption)
+                            .foregroundColor(themeManager.currentTheme.primaryAccent)
+                        }
+
+                        ForEach(viewModel.recentSearches, id: \.self) { search in
+                            HStack {
+                                Image(systemName: "clock.arrow.circlepath")
+                                    .foregroundColor(themeManager.currentTheme.tertiaryText)
+                                    .font(.caption)
+
+                                Text(search)
+                                    .foregroundColor(themeManager.currentTheme.primaryText)
+
+                                Spacer()
+                            }
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 12)
+                            .background(themeManager.currentTheme.secondaryBackground)
+                            .cornerRadius(8)
+                            .onTapGesture {
+                                viewModel.searchText = search
+                                viewModel.search()
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+
+                // Popular Characters
+                suggestedCharacters
+            }
+            .padding(.vertical)
+        }
+    }
+
+    // MARK: - Suggested Characters
+    private var suggestedCharacters: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Popular Characters")
+                .font(.headline)
+                .foregroundColor(themeManager.currentTheme.primaryText)
+                .padding(.horizontal)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 15) {
+                    ForEach(["Spider-Man", "Iron Man", "Captain America", "Thor", "Hulk",
+                            "Black Widow", "Doctor Strange", "Black Panther", "Wolverine", "Deadpool"],
+                           id: \.self) { name in
+                        VStack {
+                            Circle()
+                                .fill(themeManager.currentTheme.tertiaryBackground)
+                                .frame(width: 60, height: 60)
+                                .overlay(
+                                    Image(systemName: "person.fill")
+                                        .foregroundColor(themeManager.currentTheme.tertiaryText)
+                                )
+
+                            Text(name)
+                                .font(.caption2)
+                                .foregroundColor(themeManager.currentTheme.secondaryText)
+                                .lineLimit(1)
+                        }
+                        .frame(width: 70)
+                        .onTapGesture {
+                            viewModel.searchText = name
+                            viewModel.search()
+                        }
+                    }
+                }
+                .padding(.horizontal)
+            }
         }
     }
 
@@ -135,7 +384,6 @@ public struct SearchView: View {
                 GridItem(.flexible(), spacing: 16)
             ], spacing: 16) {
                 ForEach(viewModel.filteredComics) { comic in
-                    // Using the same ComicCardView from ComicsList module
                     ComicCardView(
                         model: ComicCardModel(from: comic),
                         onTap: {
@@ -148,231 +396,12 @@ public struct SearchView: View {
             .padding(.vertical, 10)
         }
     }
-
-    // MARK: - Search Header
-    private var searchHeader: some View {
-        VStack(spacing: 0) {
-            // Search Bar
-            HStack(spacing: 12) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.gray)
-                    .font(.system(size: 18))
-
-                TextField("Search Comics characters...", text: $viewModel.searchText)
-                    .foregroundColor(.white)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-                    .submitLabel(.search)
-                    .focused($isSearchFieldFocused)
-                    .onSubmit {
-                        // Dismiss do teclado ao submeter
-                        isSearchFieldFocused = false
-                        viewModel.search()
-                    }
-
-                if !viewModel.searchText.isEmpty {
-                    Button(action: {
-                        viewModel.clearSearch()
-                    }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.gray)
-                    }
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(Color.white.opacity(0.1))
-            .cornerRadius(10)
-            .padding(.horizontal)
-            .padding(.vertical, 10)
-
-            // Suggestions
-            if !viewModel.suggestions.isEmpty {
-                suggestionsView
-            }
-        }
-        .background(Color.black)
-    }
-
-    // MARK: - Suggestions View
-    private var suggestionsView: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
-                ForEach(Array(viewModel.suggestions.enumerated()), id: \.offset) { _, suggestion in
-                    Button(action: {
-                        // Dismiss do teclado ao selecionar sugestão
-                        isSearchFieldFocused = false
-                        viewModel.selectSuggestion(suggestion)
-                    }) {
-                        Text(suggestion)
-                            .font(.caption)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(
-                                Capsule()
-                                    .fill(Color.red.opacity(0.3))
-                            )
-                    }
-                }
-            }
-            .padding(.horizontal)
-            .padding(.bottom, 10)
-        }
-    }
-
-    // MARK: - Filter Section
-    private var filterSection: some View {
-        VStack(spacing: 10) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    ForEach(viewModel.currentFilters, id: \.self) { filter in
-                        FilterChip(
-                            title: filter.title,
-                            icon: filter.icon,
-                            isSelected: viewModel.selectedFilter == filter,
-                            action: {
-                                viewModel.updateFilter(filter)
-                            }
-                        )
-                    }
-                }
-                .padding(.horizontal)
-            }
-        }
-        .padding(.vertical, 5)
-        .background(Color.black)
-    }
-
-    // MARK: - Loading View
-    private var loadingView: some View {
-        VStack {
-            Spacer()
-            ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: .red))
-                .scaleEffect(1.5)
-            Text("Searching...")
-                .font(.caption)
-                .foregroundColor(.gray)
-                .padding(.top)
-            Spacer()
-        }
-    }
-
-    // MARK: - No Results View
-    private var noResultsView: some View {
-        VStack(spacing: 20) {
-            Spacer()
-
-            Image(systemName: "magnifyingglass.circle")
-                .font(.system(size: 80))
-                .foregroundColor(.gray)
-
-            Text("No Results Found")
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(.white)
-
-            Text("Try searching with different keywords")
-                .font(.body)
-                .foregroundColor(.gray)
-
-            Spacer()
-        }
-    }
-
-    // MARK: - Default View (Recent Searches)
-    private var defaultView: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                // Recent Searches
-                if !viewModel.recentSearches.isEmpty {
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack {
-                            Text("Recent Searches")
-                                .font(.headline)
-                                .foregroundColor(.white)
-
-                            Spacer()
-
-                            Button("Clear") {
-                                viewModel.clearRecentSearches()
-                            }
-                            .font(.caption)
-                            .foregroundColor(.red)
-                        }
-
-                        ForEach(viewModel.recentSearches, id: \.self) { search in
-                            HStack {
-                                Image(systemName: "clock.arrow.circlepath")
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-
-                                Text(search)
-                                    .foregroundColor(.white)
-
-                                Spacer()
-                            }
-                            .padding(.vertical, 8)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                // Dismiss do teclado ao selecionar busca recente
-                                isSearchFieldFocused = false
-                                viewModel.selectRecentSearch(search)
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-
-                // Popular Characters
-                popularCharactersSection
-            }
-            .padding(.top, 20)
-        }
-    }
-
-    private var popularCharactersSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Popular Characters")
-                .font(.headline)
-                .foregroundColor(.white)
-                .padding(.horizontal)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 15) {
-                    ForEach(popularCharacters, id: \.self) { name in
-                        PopularCharacterChip(name: name) {
-                            // Dismiss do teclado ao selecionar personagem popular
-                            isSearchFieldFocused = false
-                            viewModel.searchText = name
-                            viewModel.search()
-                        }
-                    }
-                }
-                .padding(.horizontal)
-            }
-        }
-        .padding(.top, 20)
-    }
-
-    private let popularCharacters = [
-        "Spider-Man",
-        "Iron Man",
-        "Captain America",
-        "Thor",
-        "Hulk",
-        "Black Widow",
-        "Doctor Strange",
-        "Black Panther",
-        "Wolverine",
-        "Deadpool"
-    ]
 }
 
 // MARK: - Supporting Views
 struct SearchResultCard: View {
     let character: Character
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         HStack(spacing: 15) {
@@ -387,11 +416,11 @@ struct SearchResultCard: View {
                         .clipShape(Circle())
                 default:
                     Circle()
-                        .fill(Color.gray.opacity(0.2))
+                        .fill(themeManager.currentTheme.tertiaryBackground)
                         .frame(width: 60, height: 60)
                         .overlay(
                             Image(systemName: "person.fill")
-                                .foregroundColor(.gray)
+                                .foregroundColor(themeManager.currentTheme.tertiaryText)
                         )
                 }
             }
@@ -399,36 +428,34 @@ struct SearchResultCard: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(character.name)
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(themeManager.currentTheme.primaryText)
 
                 if let description = character.deck,
                    !description.isEmpty {
                     Text(description)
                         .font(.caption)
-                        .foregroundColor(.gray)
+                        .foregroundColor(themeManager.currentTheme.secondaryText)
                         .lineLimit(2)
                 }
 
                 HStack(spacing: 15) {
-                    // Total de aparições em HQs (ComicVine)
                     Label("\(character.countOfIssueAppearances)", systemImage: "book.fill")
 
-                    // Quantidade de volumes/séries ligados ao personagem
                     let seriesCount = character.volumeCredits?.count ?? 0
                     Label("\(seriesCount)", systemImage: "tv.fill")
                 }
                 .font(.caption2)
-                .foregroundColor(.red)
+                .foregroundColor(themeManager.currentTheme.primaryAccent)
             }
 
             Spacer()
 
             Image(systemName: "chevron.right")
-                .foregroundColor(.gray)
+                .foregroundColor(themeManager.currentTheme.tertiaryText)
                 .font(.caption)
         }
         .padding()
-        .background(Color.white.opacity(0.05))
+        .background(themeManager.currentTheme.cardBackground)
         .cornerRadius(10)
     }
 }
@@ -438,6 +465,7 @@ struct FilterChip: View {
     let icon: String
     let isSelected: Bool
     let action: () -> Void
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         Button(action: action) {
@@ -449,40 +477,26 @@ struct FilterChip: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .foregroundColor(isSelected ? .black : .white)
+            .foregroundColor(
+                isSelected ?
+                themeManager.currentTheme.primaryBackground :
+                themeManager.currentTheme.primaryText
+            )
             .background(
                 Capsule()
-                    .fill(isSelected ? Color.red : Color.white.opacity(0.1))
+                    .fill(
+                        isSelected ?
+                        themeManager.currentTheme.primaryAccent :
+                        themeManager.currentTheme.secondaryBackground
+                    )
             )
             .overlay(
                 Capsule()
-                    .stroke(isSelected ? Color.clear : Color.red.opacity(0.3), lineWidth: 1)
+                    .stroke(
+                        themeManager.currentTheme.borderColor,
+                        lineWidth: isSelected ? 0 : 1
+                    )
             )
-        }
-    }
-}
-
-struct PopularCharacterChip: View {
-    let name: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(name)
-                .font(.caption)
-                .foregroundColor(.white)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.red, Color.red.opacity(0.7)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                )
         }
     }
 }
