@@ -13,6 +13,8 @@ public struct StatCardComponent: View {
     public let value: String
     public let color: Color
 
+    @ObservedObject private var themeManager = ThemeManager.shared
+
     public init(icon: String, title: String, value: String, color: Color) {
         self.icon = icon
         self.title = title
@@ -34,19 +36,19 @@ public struct StatCardComponent: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(value)
                     .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundColor(themeManager.currentTheme.primaryText)
 
                 Text(title)
                     .font(.caption)
-                    .foregroundColor(.gray)
+                    .foregroundColor(themeManager.currentTheme.secondaryText)
             }
-            
+
             Spacer()
         }
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color.white.opacity(0.05))
+                .fill(themeManager.currentTheme.cardBackground.opacity(0.5))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16)

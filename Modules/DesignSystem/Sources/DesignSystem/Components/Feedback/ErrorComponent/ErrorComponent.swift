@@ -11,6 +11,7 @@ public struct ErrorComponent: View {
     public let title: String
     public let message: String
     public let retryAction: (() -> Void)?
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     public init(title: String = "Erro",
                 message: String,
@@ -24,15 +25,16 @@ public struct ErrorComponent: View {
         VStack(spacing: 20) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 60))
-                .foregroundColor(.red)
+                .foregroundColor(themeManager.currentTheme.destructiveAccent)
 
             Text(title)
                 .font(.title2)
                 .fontWeight(.bold)
+                .foregroundColor(themeManager.currentTheme.primaryText)
 
             Text(message)
                 .font(.body)
-                .foregroundColor(.secondary)
+                .foregroundColor(themeManager.currentTheme.secondaryText)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
 

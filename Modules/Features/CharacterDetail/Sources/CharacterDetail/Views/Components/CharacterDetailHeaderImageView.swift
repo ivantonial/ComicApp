@@ -11,6 +11,7 @@ import SwiftUI
 
 struct CharacterDetailHeaderImageView: View {
     let comicVineImage: ComicVineImage?
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         GeometryReader { geometry in
@@ -30,9 +31,9 @@ struct CharacterDetailHeaderImageView: View {
     private var gradientOverlay: some View {
         LinearGradient(
             gradient: Gradient(colors: [
-                Color.black.opacity(0),
-                Color.black.opacity(0.3),
-                Color.black.opacity(0.8)
+                themeManager.currentTheme.primaryBackground.opacity(0),
+                themeManager.currentTheme.primaryBackground.opacity(0.3),
+                themeManager.currentTheme.primaryBackground.opacity(0.8)
             ]),
             startPoint: .top,
             endPoint: .bottom

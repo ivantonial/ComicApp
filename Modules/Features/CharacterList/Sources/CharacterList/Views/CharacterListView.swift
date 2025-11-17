@@ -14,6 +14,7 @@ public struct CharacterListView: View {
     @StateObject private var viewModel: CharacterListViewModel
     private let onCharacterSelected: ((Character) -> Void)?
 
+    @ObservedObject private var themeManager = ThemeManager.shared
     @State private var isSearching = false
 
     public init(
@@ -26,11 +27,11 @@ public struct CharacterListView: View {
 
     public var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            themeManager.currentTheme.primaryBackground.ignoresSafeArea()
 
             VStack(spacing: 0) {
                 headerView
-                    .background(Color.black)
+                    .background(themeManager.currentTheme.navigationBarBackground)
                     .zIndex(1)
 
                 if viewModel.isLoading && viewModel.characters.isEmpty {
@@ -68,9 +69,9 @@ public struct CharacterListView: View {
 
     // MARK: - Header
     private var headerView: some View {
-        Text("Comics Characters")  // Atualizado para ficar mais genérico
+        Text("Comics Characters")
             .font(.system(size: 34, weight: .bold))
-            .foregroundColor(.white)
+            .foregroundColor(themeManager.currentTheme.primaryText)
             .frame(maxWidth: .infinity, alignment: .center)
             .padding(.top, 10)
             .padding(.bottom, 15)
@@ -103,6 +104,7 @@ public struct CharacterListView: View {
 
                 if viewModel.isLoading && !viewModel.characters.isEmpty {
                     ProgressView()
+                        .tint(themeManager.currentTheme.primaryAccent)
                         .frame(maxWidth: .infinity)
                         .padding()
                 }
@@ -120,19 +122,20 @@ public struct CharacterListView: View {
     private var floatingSearchBar: some View {
         HStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
-                .foregroundColor(.white)
+                .foregroundColor(themeManager.currentTheme.invertedText)
                 .font(.system(size: 18))
 
             if isSearching {
                 TextField("Search character", text: $viewModel.searchText)
-                    .foregroundColor(.white)
+                    .foregroundColor(themeManager.currentTheme.invertedText)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
+                    .accentColor(themeManager.currentTheme.invertedText)
 
                 if !viewModel.searchText.isEmpty {
                     Button(action: { viewModel.searchText = "" }) {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.white.opacity(0.8))
+                            .foregroundColor(themeManager.currentTheme.invertedText.opacity(0.8))
                     }
                 }
 
@@ -143,11 +146,11 @@ public struct CharacterListView: View {
                         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     }
                 }
-                .foregroundColor(.white)
+                .foregroundColor(themeManager.currentTheme.invertedText)
                 .font(.system(size: 14, weight: .medium))
             } else {
                 Text("Search")
-                    .foregroundColor(.white)
+                    .foregroundColor(themeManager.currentTheme.invertedText)
                     .font(.system(size: 16, weight: .medium))
             }
         }
@@ -155,12 +158,12 @@ public struct CharacterListView: View {
         .padding(.vertical, 14)
         .background(
             RoundedRectangle(cornerRadius: isSearching ? 25 : 30)
-                .fill(Color.red.opacity(isSearching ? 0.75 : 0.7))
-                .shadow(color: .red.opacity(0.5), radius: 15, x: 0, y: 5)
+                .fill(themeManager.currentTheme.primaryAccent.opacity(isSearching ? 0.75 : 0.7))
+                .shadow(color: themeManager.currentTheme.primaryAccent.opacity(0.5), radius: 15, x: 0, y: 5)
         )
         .overlay(
             RoundedRectangle(cornerRadius: isSearching ? 25 : 30)
-                .stroke(Color.red.opacity(0.8), lineWidth: 1.5)
+                .stroke(themeManager.currentTheme.primaryAccent.opacity(0.8), lineWidth: 1.5)
         )
         .onTapGesture {
             if !isSearching {

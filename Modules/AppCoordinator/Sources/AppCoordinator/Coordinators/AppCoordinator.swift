@@ -34,12 +34,12 @@ public final class AppCoordinator: ObservableObject {
     // MARK: - Theme Manager
     private let themeManager = ThemeManager.shared
 
-    // MARK: - View Models (mantém estado entre navegações)
+    // MARK: - View Models (mantem estado entre navegacoes)
     private var searchViewModel: SearchViewModel?
     private var favoritesViewModel: FavoritesViewModel?
     private var settingsViewModel: SettingsViewModel?
 
-    // MARK: - Inicialização
+    // MARK: - Inicializacao
     public init() {
         // Ler a chave da ComicVine API diretamente do Info.plist
         let apiKey = Bundle.main.object(forInfoDictionaryKey: "COMIC_VINE_API_KEY") as? String ?? ""
@@ -55,7 +55,7 @@ public final class AppCoordinator: ObservableObject {
                 """)
         }
 
-        // Configurar serviços
+        // Configurar servicos
         self.networkService = NetworkService()
         self.comicVineService = ComicVineAPIService(networkService: networkService, apiKey: apiKey)
         self.persistenceManager = PersistenceManager()
@@ -171,7 +171,55 @@ public final class AppCoordinator: ObservableObject {
             }
             .tag(AppTab.settings)
         }
-        .tint(.red)
+        .tint(themeManager.currentTheme.primaryAccent)  // MUDANÇA: Usar cor do tema ao invés de .red hardcoded
+        .onAppear {
+            // Configurar aparência da TabBar baseada no tema
+            self.setupTabBarAppearance()
+        }
+    }
+
+    // MARK: - TabBar Appearance Setup
+    private func setupTabBarAppearance() {
+        let appearance = UITabBarAppearance()
+
+        if themeManager.isDarkMode {
+            // Configuração para Dark Mode
+            appearance.configureWithDefaultBackground()
+            appearance.backgroundColor = UIColor(themeManager.currentTheme.tabBarBackground)
+            appearance.shadowColor = UIColor(themeManager.currentTheme.shadowColor)
+
+            // Ícones e texto não selecionados
+            appearance.stackedLayoutAppearance.normal.iconColor = UIColor(themeManager.currentTheme.tertiaryText)
+            appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
+                .foregroundColor: UIColor(themeManager.currentTheme.tertiaryText)
+            ]
+
+            // Ícones e texto selecionados
+            appearance.stackedLayoutAppearance.selected.iconColor = UIColor(themeManager.currentTheme.primaryAccent)
+            appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
+                .foregroundColor: UIColor(themeManager.currentTheme.primaryAccent)
+            ]
+        } else {
+            // Configuração para Light Mode
+            appearance.configureWithDefaultBackground()
+            appearance.backgroundColor = UIColor(themeManager.currentTheme.tabBarBackground)
+            appearance.shadowColor = UIColor(themeManager.currentTheme.shadowColor.opacity(0.2))
+
+            // Ícones e texto não selecionados
+            appearance.stackedLayoutAppearance.normal.iconColor = UIColor(themeManager.currentTheme.tertiaryText)
+            appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
+                .foregroundColor: UIColor(themeManager.currentTheme.tertiaryText)
+            ]
+
+            // Ícones e texto selecionados
+            appearance.stackedLayoutAppearance.selected.iconColor = UIColor(themeManager.currentTheme.primaryAccent)
+            appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
+                .foregroundColor: UIColor(themeManager.currentTheme.primaryAccent)
+            ]
+        }
+
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
     }
 
     // MARK: - Navigation Methods
@@ -193,7 +241,7 @@ public final class AppCoordinator: ObservableObject {
     }
 
     public func navigateToComics(for character: Character) {
-        // Detecta qual tab está ativa e navega na path correta
+        // Detecta qual tab esta ativa e navega na path correta
         switch selectedTab {
         case .characters:
             charactersPath.append(CharacterDestination.comics(character))
