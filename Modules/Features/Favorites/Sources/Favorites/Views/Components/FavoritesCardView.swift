@@ -16,6 +16,8 @@ public struct FavoriteCardView: View {
     public let onTap: () -> Void
     public let onRemove: () -> Void
 
+    @ObservedObject private var themeManager = ThemeManager.shared
+
     public init(
         character: Character,
         isSelected: Bool,
@@ -33,9 +35,9 @@ public struct FavoriteCardView: View {
     public var body: some View {
         let _ = print("🔧 [FavoriteCardView] Rendering card for: \(character.name)")
         ZStack(alignment: .topTrailing) {
-            // Card principal - passa o onTap diretamente para o ContentCardComponent
+            // Card principal - cria o modelo com acesso ao themeManager
             ContentCardComponent(
-                model: character.toContentCardModel(),
+                model: createContentCardModel(),
                 onTap: {
                     print("🎯 [FavoriteCardView] onTap triggered for: \(character.name)")
                     onTap()
@@ -52,12 +54,12 @@ public struct FavoriteCardView: View {
         if isSelectionMode {
             // Modo seleção: bolinha de seleção
             Circle()
-                .fill(isSelected ? Color.red : Color.gray.opacity(0.3))
+                .fill(isSelected ? themeManager.currentTheme.primaryAccent : themeManager.currentTheme.tertiaryText.opacity(0.3))
                 .frame(width: 24, height: 24)
                 .overlay(
                     Image(systemName: isSelected ? "checkmark" : "circle")
                         .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(themeManager.currentTheme.invertedText)
                 )
                 .padding(8)
         } else {
@@ -68,10 +70,10 @@ public struct FavoriteCardView: View {
             }) {
                 Image(systemName: "heart.fill")
                     .font(.system(size: 18))
-                    .foregroundColor(.red)
+                    .foregroundColor(themeManager.currentTheme.primaryAccent)
                     .padding(6)
                     .background(
-                        Circle().fill(Color.black.opacity(0.6))
+                        Circle().fill(themeManager.currentTheme.overlayColor)
                     )
             }
             .buttonStyle(.plain)
@@ -79,18 +81,17 @@ public struct FavoriteCardView: View {
             .allowsHitTesting(true) // ✅ Garante que apenas o botão responda ao toque
         }
     }
-}
 
-// MARK: - Mapper para ContentCardModel
+    // MARK: - Content Card Model Creation
 
-private extension Character {
-    func toContentCardModel() -> ContentCardModel {
-        let image = self.image
-        let countOfIssueAppearances = self.countOfIssueAppearances
+    /// Cria o modelo do card com acesso ao themeManager
+    private func createContentCardModel() -> ContentCardModel {
+        let image = character.image
+        let countOfIssueAppearances = character.countOfIssueAppearances
 
         return ContentCardModel(
-            id: id,
-            title: name,
+            id: character.id,
+            title: character.name,
             subtitle: nil,
             // ComicVine: melhor URL disponível
             imageURL: image.bestQualityUrl,
@@ -101,7 +102,7 @@ private extension Character {
                 // Marvel: comics.available
                 // ComicVine: countOfIssueAppearances
                 text: "\(countOfIssueAppearances) comics",
-                color: .gray
+                color: themeManager.currentTheme.tertiaryText  // ✅ Agora tem acesso ao themeManager
             )
         )
     }

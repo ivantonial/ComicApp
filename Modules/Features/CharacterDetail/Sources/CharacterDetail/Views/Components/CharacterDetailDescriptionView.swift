@@ -15,6 +15,7 @@ public struct CharacterDetailDescriptionView: View {
     let descriptionHTML: String?
 
     @State private var isShowingFullDescription = false
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     public init(name: String, deck: String?, description: String?) {
         self.name = name
@@ -28,7 +29,7 @@ public struct CharacterDetailDescriptionView: View {
             if let deck, !deck.isEmpty {
                 Text(deck)
                     .font(.system(size: 16, weight: .regular))
-                    .foregroundColor(.white)
+                    .foregroundColor(themeManager.currentTheme.primaryText)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -42,7 +43,7 @@ public struct CharacterDetailDescriptionView: View {
                         Image(systemName: "arrow.right.circle.fill")
                     }
                     .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(.red)
+                    .foregroundColor(themeManager.currentTheme.primaryAccent)
                 }
                 .padding(.top, 4)
                 .accessibilityIdentifier("viewFullDescriptionButton")
@@ -50,7 +51,7 @@ public struct CharacterDetailDescriptionView: View {
                 // fallback quando não há deck nem description
                 Text("No description available")
                     .font(.system(size: 15, weight: .regular))
-                    .foregroundColor(.gray.opacity(0.6))
+                    .foregroundColor(themeManager.currentTheme.tertiaryText.opacity(0.6))
                     .italic()
             }
         }
@@ -72,20 +73,24 @@ private struct DescriptionWebSheet: View {
     let html: String
     let name: String
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            Color.black.ignoresSafeArea()
+            themeManager.currentTheme.primaryBackground.ignoresSafeArea()
 
             WebViewComponent(
                 htmlContent: html,
-                title: name
+                title: name,
+                backgroundColor: UIColor(themeManager.currentTheme.primaryBackground),
+                textColor: themeManager.isDarkMode ? "#FFFFFF" : "#000000",
+                fontSize: 16
             )
 
             Button(action: { dismiss() }) {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 24))
-                    .foregroundColor(.white.opacity(0.9))
+                    .foregroundColor(themeManager.currentTheme.primaryText.opacity(0.9))
                     .padding()
             }
         }

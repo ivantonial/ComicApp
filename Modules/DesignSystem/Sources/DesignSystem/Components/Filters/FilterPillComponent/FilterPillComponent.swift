@@ -21,10 +21,32 @@ public struct FilterPillComponent: View {
     public let icon: String?
     public let isSelected: Bool
     public let style: FilterPillStyle
-    public let selectedColor: Color
+    public let useThemeColors: Bool  // Nova propriedade para usar cores do tema
+    public let customSelectedColor: Color?  // Cor customizada opcional
     public let action: () -> Void
 
+    @ObservedObject private var themeManager = ThemeManager.shared
+
     // MARK: - Initialization
+    public init(
+        title: String,
+        icon: String? = nil,
+        isSelected: Bool,
+        style: FilterPillStyle = .primary,
+        useThemeColors: Bool = true,  // Por padrão usa cores do tema
+        customSelectedColor: Color? = nil,  // Permite cor customizada se necessário
+        action: @escaping () -> Void
+    ) {
+        self.title = title
+        self.icon = icon
+        self.isSelected = isSelected
+        self.style = style
+        self.useThemeColors = useThemeColors
+        self.customSelectedColor = customSelectedColor
+        self.action = action
+    }
+
+    // Mantém inicializador antigo para compatibilidade
     public init(
         title: String,
         icon: String? = nil,
@@ -37,7 +59,8 @@ public struct FilterPillComponent: View {
         self.icon = icon
         self.isSelected = isSelected
         self.style = style
-        self.selectedColor = selectedColor
+        self.useThemeColors = false
+        self.customSelectedColor = selectedColor
         self.action = action
     }
 
@@ -64,26 +87,66 @@ public struct FilterPillComponent: View {
     }
 
     // MARK: - Computed Properties
+    private var selectedColor: Color {
+        if useThemeColors {
+            return themeManager.currentTheme.primaryAccent
+        } else {
+            return customSelectedColor ?? .red
+        }
+    }
+
     private var foregroundColor: Color {
-        switch style {
-        case .primary:
-            return isSelected ? .black : .white
-        case .outlined, .minimal:
-            return isSelected ? selectedColor : .gray
+        if useThemeColors {
+            switch style {
+            case .primary:
+                return isSelected ?
+                    themeManager.currentTheme.primaryBackground :
+                    themeManager.currentTheme.primaryText
+            case .outlined, .minimal:
+                return isSelected ?
+                    themeManager.currentTheme.primaryAccent :
+                    themeManager.currentTheme.tertiaryText
+            }
+        } else {
+            // Comportamento anterior para compatibilidade
+            switch style {
+            case .primary:
+                return isSelected ? .black : .white
+            case .outlined, .minimal:
+                return isSelected ? selectedColor : .gray
+            }
         }
     }
 
     @ViewBuilder
     private var backgroundView: some View {
-        switch style {
-        case .primary:
-            Capsule()
-                .fill(isSelected ? selectedColor : Color.white.opacity(0.1))
-        case .outlined:
-            Capsule()
-                .fill(Color.clear)
-        case .minimal:
-            Color.clear
+        if useThemeColors {
+            switch style {
+            case .primary:
+                Capsule()
+                    .fill(
+                        isSelected ?
+                        themeManager.currentTheme.primaryAccent :
+                        themeManager.currentTheme.secondaryBackground
+                    )
+            case .outlined:
+                Capsule()
+                    .fill(Color.clear)
+            case .minimal:
+                Color.clear
+            }
+        } else {
+            // Comportamento anterior para compatibilidade
+            switch style {
+            case .primary:
+                Capsule()
+                    .fill(isSelected ? selectedColor : Color.white.opacity(0.1))
+            case .outlined:
+                Capsule()
+                    .fill(Color.clear)
+            case .minimal:
+                Color.clear
+            }
         }
     }
 
@@ -93,13 +156,76 @@ public struct FilterPillComponent: View {
         case .primary:
             EmptyView()
         case .outlined:
-            Capsule()
-                .stroke(
-                    isSelected ? selectedColor : Color.gray.opacity(0.3),
-                    lineWidth: 1
-                )
+            if useThemeColors {
+                Capsule()
+                    .stroke(
+                        isSelected ?
+                        themeManager.currentTheme.primaryAccent :
+                        themeManager.currentTheme.borderColor,
+                        lineWidth: 1
+                    )
+            } else {
+                Capsule()
+                    .stroke(
+                        isSelected ? selectedColor : Color.gray.opacity(0.3),
+                        lineWidth: 1
+                    )
+            }
         case .minimal:
             EmptyView()
         }
     }
 }
+
+// MARK: - Preview
+#if DEBUG
+struct FilterPillComponent_Previews: PreviewProvider {
+    static var previews: some View {
+        VStack(spacing: 20) {
+            // Teste com tema
+            HStack {
+                FilterPillComponent(
+                    title: "Heroes",
+                    icon: "person.fill",
+                    isSelected: true,
+                    style: .primary,
+                    useThemeColors: true,
+                    action: {}
+                )
+
+                FilterPillComponent(
+                    title: "Villains",
+                    icon: "person.fill.xmark",
+                    isSelected: false,
+                    style: .primary,
+                    useThemeColors: true,
+                    action: {}
+                )
+            }
+
+            // Teste com cor customizada
+            HStack {
+                FilterPillComponent(
+                    title: "Teams",
+                    icon: "person.3.fill",
+                    isSelected: true,
+                    style: .outlined,
+                    selectedColor: .blue,
+                    action: {}
+                )
+
+                FilterPillComponent(
+                    title: "All",
+                    isSelected: false,
+                    style: .minimal,
+                    selectedColor: .green,
+                    action: {}
+                )
+            }
+        }
+        .padding()
+        .background(Color.black)
+        .environment(\.colorScheme, .dark)
+    }
+}
+#endif

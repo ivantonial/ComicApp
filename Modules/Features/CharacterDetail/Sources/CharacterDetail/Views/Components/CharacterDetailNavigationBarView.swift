@@ -5,12 +5,14 @@
 //  Created by Ivan Tonial IP.TV on 10/10/25.
 //
 
+import DesignSystem
 import SwiftUI
 
 struct CharacterDetailNavigationBarView: View {
     let isFavorite: Bool
     let onBack: () -> Void
     let onToggleFavorite: () -> Void
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         VStack {
@@ -38,16 +40,17 @@ struct CharacterDetailNavigationBarView: View {
 
 private struct NavigationBackButton: View {
     let action: () -> Void
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         Button(action: action) {
             Image(systemName: "chevron.left")
                 .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(.white)
+                .foregroundColor(themeManager.currentTheme.invertedText)
                 .padding(12)
                 .background(
                     Circle()
-                        .fill(Color.black.opacity(0.6))
+                        .fill(themeManager.currentTheme.primaryBackground.opacity(0.6))
                         .blur(radius: 1)
                 )
         }
@@ -60,6 +63,7 @@ private struct NavigationBackButton: View {
 private struct AnimatedFavoriteButton: View {
     let isFavorite: Bool
     let action: () -> Void
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     @State private var animationScale: CGFloat = 1.0
 
@@ -70,11 +74,11 @@ private struct AnimatedFavoriteButton: View {
         }) {
             Image(systemName: isFavorite ? "heart.fill" : "heart")
                 .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(isFavorite ? .red : .white)
+                .foregroundColor(isFavorite ? themeManager.currentTheme.destructiveAccent : themeManager.currentTheme.invertedText)
                 .padding(12)
                 .background(
                     Circle()
-                        .fill(Color.black.opacity(0.6))
+                        .fill(themeManager.currentTheme.primaryBackground.opacity(0.6))
                         .blur(radius: 1)
                 )
                 .scaleEffect(animationScale)

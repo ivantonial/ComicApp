@@ -9,6 +9,7 @@ import SwiftUI
 
 public struct LoadingComponent: View {
     public let message: String?
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     public init(message: String? = nil) {
         self.message = message
@@ -17,16 +18,16 @@ public struct LoadingComponent: View {
     public var body: some View {
         VStack(spacing: 16) {
             ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: .red))
+                .progressViewStyle(CircularProgressViewStyle(tint: themeManager.currentTheme.primaryAccent))
                 .scaleEffect(1.5)
 
             if let message {
                 Text(message)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(themeManager.currentTheme.secondaryText)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.black.opacity(0.9))
+        .background(themeManager.currentTheme.primaryBackground.opacity(0.9))
     }
 }
