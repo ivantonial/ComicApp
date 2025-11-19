@@ -30,7 +30,7 @@ Podfile.lock
 # ========================================
 # Secrets & Configs
 # ========================================
-Config/Secrets.xcconfig
+ComicApp/Config/Secrets.xcconfig
 
 # ========================================
 # Fastlane (caso use futuramente)
