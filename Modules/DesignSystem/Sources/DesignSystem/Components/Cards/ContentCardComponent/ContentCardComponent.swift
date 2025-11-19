@@ -81,8 +81,8 @@ public struct ContentCardComponent: View {
     private let model: ContentCardModel
     private let onTap: (() -> Void)?
 
-    @State private var isPressed = false
     @State private var retryCount = 0
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     public init(model: ContentCardModel, onTap: (() -> Void)? = nil) {
         self.model = model
@@ -90,31 +90,35 @@ public struct ContentCardComponent: View {
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
-            // Container da imagem com proporção fixa
-            imageContainer
-                .aspectRatio(model.aspectRatio, contentMode: .fill)
-                .clipped()
-                .cornerRadius(12, corners: [.topLeft, .topRight])
+        Button(action: {
+            onTap?()
+        }) {
+            VStack(spacing: 0) {
+                // Container da imagem com proporção fixa
+                imageContainer
+                    .aspectRatio(model.aspectRatio, contentMode: .fill)
+                    .clipped()
+                    .cornerRadius(12, corners: [.topLeft, .topRight])
 
-            cardInfo
-        }
-        .frame(height: model.fixedHeight) // Aplica altura fixa se especificada
-        .frame(maxWidth: .infinity)
-        .background(Color.black)
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.red.opacity(0.3), lineWidth: 1)
-        )
-        .shadow(color: .red.opacity(0.2), radius: 5, x: 0, y: 2)
-        .scaleEffect(isPressed ? 0.95 : 1.0)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            animateTap {
-                onTap?()
+                cardInfo
             }
+            .frame(height: model.fixedHeight) // Aplica altura fixa se especificada
+            .frame(maxWidth: .infinity)
+            .background(themeManager.currentTheme.cardBackground)
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(themeManager.currentTheme.primaryAccent.opacity(0.3), lineWidth: 1)
+            )
+            .shadow(
+                color: themeManager.currentTheme.shadowColor.opacity(0.2),
+                radius: 5,
+                x: 0,
+                y: 2
+            )
+            .contentShape(Rectangle())
         }
+        .buttonStyle(PressableCardButtonStyle())
     }
 
     // MARK: - Image Container
@@ -173,27 +177,13 @@ public struct ContentCardComponent: View {
         }
     }
 
-    // MARK: - Helpers
-    private func animateTap(_ action: @escaping () -> Void) {
-        withAnimation(.easeInOut(duration: 0.1)) {
-            isPressed = true
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            withAnimation(.easeInOut(duration: 0.1)) {
-                isPressed = false
-            }
-            action()
-        }
-    }
-
     // MARK: - Loading View
     private var loadingView: some View {
         ZStack {
             placeholderBackground
 
             ProgressView()
-                .tint(.red)
+                .tint(themeManager.currentTheme.primaryAccent)
                 .scaleEffect(0.8)
         }
     }
@@ -205,7 +195,7 @@ public struct ContentCardComponent: View {
 
             Image(systemName: placeholderIcon)
                 .font(.system(size: placeholderIconSize))
-                .foregroundColor(.gray.opacity(0.5))
+                .foregroundColor(themeManager.currentTheme.tertiaryText.opacity(0.5))
         }
     }
 
@@ -213,8 +203,8 @@ public struct ContentCardComponent: View {
         ZStack {
             LinearGradient(
                 colors: [
-                    Color.red.opacity(0.2),
-                    Color.red.opacity(0.1)
+                    themeManager.currentTheme.primaryAccent.opacity(0.2),
+                    themeManager.currentTheme.primaryAccent.opacity(0.1)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
@@ -223,11 +213,11 @@ public struct ContentCardComponent: View {
             VStack(spacing: 8) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: placeholderIconSize * 0.8))
-                    .foregroundColor(.red.opacity(0.7))
+                    .foregroundColor(themeManager.currentTheme.destructiveAccent.opacity(0.7))
 
                 Text("Tap to retry")
                     .font(.caption2)
-                    .foregroundColor(.gray)
+                    .foregroundColor(themeManager.currentTheme.secondaryText)
             }
         }
         .onTapGesture {
@@ -238,8 +228,8 @@ public struct ContentCardComponent: View {
     private var placeholderBackground: some View {
         LinearGradient(
             colors: [
-                Color.gray.opacity(0.3),
-                Color.gray.opacity(0.1)
+                themeManager.currentTheme.tertiaryBackground.opacity(0.3),
+                themeManager.currentTheme.tertiaryBackground.opacity(0.1)
             ],
             startPoint: .top,
             endPoint: .bottom
@@ -267,7 +257,7 @@ public struct ContentCardComponent: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(model.title)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.white)
+                .foregroundColor(themeManager.currentTheme.primaryText)
                 .lineLimit(2)
                 .minimumScaleFactor(0.9)
                 .fixedSize(horizontal: false, vertical: true)
@@ -275,7 +265,7 @@ public struct ContentCardComponent: View {
             if let subtitle = model.subtitle, !subtitle.isEmpty {
                 Text(subtitle)
                     .font(.caption)
-                    .foregroundColor(.gray)
+                    .foregroundColor(themeManager.currentTheme.secondaryText)
                     .lineLimit(2)
             } else if let badge = model.badge {
                 HStack(spacing: 4) {
@@ -315,14 +305,23 @@ public struct ContentCardComponent: View {
         .background(
             LinearGradient(
                 colors: [
-                    Color.black,
-                    Color.black.opacity(0.95)
+                    themeManager.currentTheme.cardBackground,
+                    themeManager.currentTheme.cardBackground.opacity(0.95)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
             )
         )
         .cornerRadius(12, corners: [.bottomLeft, .bottomRight])
+    }
+}
+
+// MARK: - Button Style para efeito de pressão sem tempo arbitrário
+struct PressableCardButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
     }
 }
 

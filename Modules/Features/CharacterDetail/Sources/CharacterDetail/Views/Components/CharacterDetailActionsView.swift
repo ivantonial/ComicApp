@@ -13,6 +13,7 @@ struct CharacterDetailActionsView: View {
     let comicsCount: Int
     let wikiURL: URL?
     let onComicsSelected: (() -> Void)?
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         VStack(spacing: 12) {
@@ -30,10 +31,10 @@ struct CharacterDetailActionsView: View {
                         Text("View on ComicVine Wiki")
                     }
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(themeManager.currentTheme.primaryText)
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.gray.opacity(0.3))
+                    .background(themeManager.currentTheme.tertiaryBackground.opacity(0.5))
                     .cornerRadius(12)
                 }
             }

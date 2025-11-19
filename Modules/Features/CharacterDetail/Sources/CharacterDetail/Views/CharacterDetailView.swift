@@ -13,6 +13,7 @@ import SwiftUI
 public struct CharacterDetailView: View {
     @StateObject private var viewModel: CharacterDetailViewModel
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var themeManager = ThemeManager.shared
     private let onComicsSelected: (() -> Void)?
 
     // Debug tracking
@@ -29,7 +30,7 @@ public struct CharacterDetailView: View {
 
     public var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            themeManager.currentTheme.primaryBackground.ignoresSafeArea()
 
             ScrollView {
                 VStack(spacing: 0) {
@@ -77,7 +78,7 @@ public struct CharacterDetailView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(viewModel.detailModel.character.name)
                     .font(.system(size: 34, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundColor(themeManager.currentTheme.primaryText)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 // Real Name (se disponível)
@@ -85,7 +86,7 @@ public struct CharacterDetailView: View {
                    !realName.isEmpty {
                     Text("Real Name: \(realName)")
                         .font(.system(size: 14))
-                        .foregroundColor(.gray)
+                        .foregroundColor(themeManager.currentTheme.secondaryText)
                 }
 
                 // Publisher (se disponível)
@@ -96,12 +97,12 @@ public struct CharacterDetailView: View {
                         Text(publisher)
                             .font(.system(size: 14, weight: .medium))
                     }
-                    .foregroundColor(.red.opacity(0.8))
+                    .foregroundColor(themeManager.currentTheme.primaryAccent.opacity(0.8))
                     .padding(.top, 4)
                 }
             }
             .onAppear {
-                print("📝 Displaying character: \(viewModel.detailModel.character.name)")
+                print("🔍 Displaying character: \(viewModel.detailModel.character.name)")
             }
 
             // Description com deck e description HTML
@@ -138,8 +139,8 @@ public struct CharacterDetailView: View {
         .padding(.top, -40)
         .background(
             RoundedRectangle(cornerRadius: 30)
-                .fill(Color.black)
-                .shadow(color: .red.opacity(0.3), radius: 20, x: 0, y: -10)
+                .fill(themeManager.currentTheme.cardBackground)
+                .shadow(color: themeManager.currentTheme.primaryAccent.opacity(0.3), radius: 20, x: 0, y: -10)
         )
     }
 
@@ -152,17 +153,17 @@ public struct CharacterDetailView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("TEAMS")
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.red)
+                    .foregroundColor(themeManager.currentTheme.primaryAccent)
                     .tracking(2)
 
                 ForEach(teams.prefix(3), id: \.id) { team in
                     HStack {
                         Image(systemName: "person.3.fill")
                             .font(.system(size: 12))
-                            .foregroundColor(.yellow)
+                            .foregroundColor(themeManager.currentTheme.warningAccent)
                         Text(team.name)
                             .font(.system(size: 14))
-                            .foregroundColor(.white)
+                            .foregroundColor(themeManager.currentTheme.primaryText)
                     }
                 }
             }
@@ -173,7 +174,7 @@ public struct CharacterDetailView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("POWERS")
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.red)
+                    .foregroundColor(themeManager.currentTheme.primaryAccent)
                     .tracking(2)
 
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -181,12 +182,12 @@ public struct CharacterDetailView: View {
                         ForEach(powers, id: \.id) { power in
                             Text(power.name)
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.black)
+                                .foregroundColor(themeManager.currentTheme.primaryBackground)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
                                 .background(
                                     Capsule()
-                                        .fill(Color.yellow)
+                                        .fill(themeManager.currentTheme.warningAccent)
                                 )
                         }
                     }

@@ -37,6 +37,7 @@ public struct ComicVineAsyncImageComponent: View {
     @State private var hasError = false
     @State private var retryCount = 0
     @State private var autoRetryAttempts = 0
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     // Configuração de retry
     private let maxAutoRetries = 3
@@ -56,14 +57,14 @@ public struct ComicVineAsyncImageComponent: View {
                     ?? img.mediumUrl
 
             case .cardSmall:
-                // Card retangular pequeno (se vocÃª usar em outra tela)
+                // Card retangular pequeno (se você usar em outra tela)
                 return img.mediumUrl
                     ?? img.smallUrl
                     ?? img.screenUrl
                     ?? img.originalUrl
 
             case .cardMedium:
-                // Card retangular mÃ©dio (ex: HQ em portrait)
+                // Card retangular médio (ex: HQ em portrait)
                 return img.mediumUrl
                     ?? img.superUrl
                     ?? img.screenUrl
@@ -79,9 +80,9 @@ public struct ComicVineAsyncImageComponent: View {
             case .cardSquareSmall,
                  .cardSquareMedium,
                  .cardSquareLarge:
-                // ðŸ”´ AQUI Ã© o caso da sua lista de personagens
+                // 🔴 AQUI é o caso da sua lista de personagens
                 // Volta a priorizar SEMPRE o screen (screen_medium),
-                // que Ã© justamente o recorte landscape mais consistente
+                // que é justamente o recorte landscape mais consistente
                 return img.originalUrl
                     ?? img.superUrl
                     ?? img.mediumUrl
@@ -201,8 +202,8 @@ public struct ComicVineAsyncImageComponent: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color.gray.opacity(0.3),
-                            Color.gray.opacity(0.1)
+                            themeManager.currentTheme.tertiaryBackground.opacity(0.3),
+                            themeManager.currentTheme.tertiaryBackground.opacity(0.1)
                         ],
                         startPoint: .top,
                         endPoint: .bottom
@@ -210,7 +211,7 @@ public struct ComicVineAsyncImageComponent: View {
                 )
 
             ProgressView()
-                .tint(.red)
+                .tint(themeManager.currentTheme.primaryAccent)
                 .scaleEffect(0.8)
         }
         .frame(
@@ -225,8 +226,8 @@ public struct ComicVineAsyncImageComponent: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color.gray.opacity(0.3),
-                            Color.gray.opacity(0.1)
+                            themeManager.currentTheme.tertiaryBackground.opacity(0.3),
+                            themeManager.currentTheme.tertiaryBackground.opacity(0.1)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -235,7 +236,7 @@ public struct ComicVineAsyncImageComponent: View {
 
             Image(systemName: iconForContext)
                 .font(.system(size: iconSize))
-                .foregroundColor(Color.gray.opacity(0.5))
+                .foregroundColor(themeManager.currentTheme.tertiaryText.opacity(0.5))
         }
         .frame(
             width: fixedSize?.width,
@@ -249,8 +250,8 @@ public struct ComicVineAsyncImageComponent: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color.red.opacity(0.2),
-                            Color.red.opacity(0.1)
+                            themeManager.currentTheme.destructiveAccent.opacity(0.2),
+                            themeManager.currentTheme.destructiveAccent.opacity(0.1)
                         ],
                         startPoint: .top,
                         endPoint: .bottom
@@ -260,11 +261,11 @@ public struct ComicVineAsyncImageComponent: View {
             VStack(spacing: 8) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: iconSize * 0.8))
-                    .foregroundColor(.red.opacity(0.7))
+                    .foregroundColor(themeManager.currentTheme.destructiveAccent.opacity(0.7))
 
                 Text("Tap to retry")
                     .font(.caption2)
-                    .foregroundColor(.gray)
+                    .foregroundColor(themeManager.currentTheme.secondaryText)
             }
         }
         .frame(
@@ -376,7 +377,7 @@ public extension ComicVineAsyncImageComponent {
         )
     }
 
-    /// Inicializador para imagem de cabeÃ§alho
+    /// Inicializador para imagem de cabeçalho
     static func header(
         _ comicVineImage: ComicVineImage?
     ) -> ComicVineAsyncImageComponent {

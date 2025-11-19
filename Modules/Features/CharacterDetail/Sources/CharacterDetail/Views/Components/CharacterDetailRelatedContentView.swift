@@ -5,16 +5,18 @@
 //  Created by Ivan Tonial IP.TV on 10/10/25.
 //
 
+import DesignSystem
 import SwiftUI
 
 struct CharacterDetailRelatedContentView: View {
     let relatedContent: CharacterRelatedContentModel
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("APPEARS IN")
                 .font(.system(size: 14, weight: .bold))
-                .foregroundColor(.red)
+                .foregroundColor(themeManager.currentTheme.primaryAccent)
                 .tracking(2)
 
             if !relatedContent.recentComics.isEmpty {
@@ -39,12 +41,13 @@ struct CharacterDetailRelatedContentView: View {
 private struct RelatedItemsSectionView: View {
     let title: String
     let items: [RelatedItemModel]
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
                 .font(.headline)
-                .foregroundColor(.white)
+                .foregroundColor(themeManager.currentTheme.primaryText)
 
             ForEach(items.prefix(3)) { item in
                 HStack {
@@ -53,7 +56,7 @@ private struct RelatedItemsSectionView: View {
 
                     Text(item.name)
                         .font(.subheadline)
-                        .foregroundColor(.gray)
+                        .foregroundColor(themeManager.currentTheme.secondaryText)
                         .lineLimit(1)
 
                     Spacer()

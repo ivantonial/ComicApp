@@ -15,6 +15,7 @@ public struct FavoritesView: View {
     @StateObject private var viewModel: FavoritesViewModel
     @State private var showingShareSheet = false
     @State private var showingDeleteAlert = false
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     private let onCharacterSelected: ((Character) -> Void)?
 
@@ -37,7 +38,7 @@ public struct FavoritesView: View {
         let _ = print("📱 [FavoritesView] Rendering with \(viewModel.favoriteCharacters.count) favorites")
 
         ZStack {
-            Color.black.ignoresSafeArea()
+            themeManager.currentTheme.primaryBackground.ignoresSafeArea()
 
             VStack(spacing: 0) {
                 headerView
@@ -85,12 +86,12 @@ public struct FavoritesView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("My Favorites")
                 .font(.system(size: 34, weight: .bold))
-                .foregroundColor(.white)
+                .foregroundColor(themeManager.currentTheme.primaryText)
 
             if viewModel.hasFavorites {
                 Text("\(viewModel.favoriteCharacters.count) Characters")
                     .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .foregroundColor(themeManager.currentTheme.secondaryText)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -103,15 +104,15 @@ public struct FavoritesView: View {
     private var searchBar: some View {
         HStack {
             Image(systemName: "magnifyingglass")
-                .foregroundColor(.gray)
+                .foregroundColor(themeManager.currentTheme.tertiaryText)
 
             TextField("Search favorites...", text: $viewModel.searchText)
-                .foregroundColor(.white)
+                .foregroundColor(themeManager.currentTheme.primaryText)
                 .autocorrectionDisabled()
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(Color.white.opacity(0.1))
+        .background(themeManager.currentTheme.searchBarBackground)
         .cornerRadius(10)
         .padding(.horizontal)
         .padding(.bottom, 10)
@@ -147,14 +148,14 @@ public struct FavoritesView: View {
             }) {
                 Text(viewModel.isAllSelected ? "Deselect All" : "Select All")
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.red)
+                    .foregroundColor(themeManager.currentTheme.primaryAccent)
             }
 
             Spacer()
 
             Text("\(viewModel.selectedCount) selected")
                 .font(.caption)
-                .foregroundColor(.gray)
+                .foregroundColor(themeManager.currentTheme.secondaryText)
 
             Spacer()
 
@@ -164,13 +165,13 @@ public struct FavoritesView: View {
                 }
             }) {
                 Image(systemName: "trash")
-                    .foregroundColor(viewModel.selectedCount > 0 ? .red : .gray)
+                    .foregroundColor(viewModel.selectedCount > 0 ? themeManager.currentTheme.destructiveAccent : themeManager.currentTheme.tertiaryText)
             }
             .disabled(viewModel.selectedCount == 0)
         }
         .padding(.horizontal)
         .padding(.vertical, 10)
-        .background(Color.white.opacity(0.05))
+        .background(themeManager.currentTheme.tertiaryBackground.opacity(0.5))
     }
 
     // MARK: - Toolbar
@@ -196,7 +197,7 @@ public struct FavoritesView: View {
 
                 } label: {
                     Image(systemName: "ellipsis.circle")
-                        .foregroundColor(.white)
+                        .foregroundColor(themeManager.currentTheme.primaryText)
                 }
             }
         }
@@ -237,16 +238,16 @@ public struct FavoritesView: View {
 
             Image(systemName: "heart.slash")
                 .font(.system(size: 80))
-                .foregroundColor(.gray)
+                .foregroundColor(themeManager.currentTheme.tertiaryText)
 
             Text("No Favorites Yet")
                 .font(.title2)
                 .fontWeight(.bold)
-                .foregroundColor(.white)
+                .foregroundColor(themeManager.currentTheme.primaryText)
 
             Text("Start adding your favorite Comic characters")
                 .font(.body)
-                .foregroundColor(.gray)
+                .foregroundColor(themeManager.currentTheme.secondaryText)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
 
