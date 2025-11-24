@@ -16,13 +16,9 @@ public struct FavoritesView: View {
     @State private var showingShareSheet = false
     @State private var showingDeleteAlert = false
     @ObservedObject private var themeManager = ThemeManager.shared
+    @Environment(\.dismiss) private var dismiss
 
     private let onCharacterSelected: ((Character) -> Void)?
-
-    private let columns = [
-        GridItem(.flexible(), spacing: 16),
-        GridItem(.flexible(), spacing: 16)
-    ]
 
     // MARK: - Initialization
     public init(
@@ -40,29 +36,74 @@ public struct FavoritesView: View {
         ZStack {
             themeManager.currentTheme.primaryBackground.ignoresSafeArea()
 
+            // Main Content
             VStack(spacing: 0) {
-                headerView
+                // Header
+                FavoritesHeaderView(
+                    favoriteCount: viewModel.favoriteCharacters.count,
+                    hasFavorites: viewModel.hasFavorites
+                )
 
+                // Search Bar
                 if viewModel.hasFavorites {
-                    searchBar
+                    FavoritesSearchBarView(searchText: $viewModel.searchText)
                 }
 
+                // Sort Options
                 if viewModel.hasFavorites && !viewModel.isSelectionMode {
-                    sortOptions
+                    FavoritesSortOptionsView(
+                        sortOption: viewModel.sortOption,
+                        onSortOptionChanged: viewModel.updateSortOption
+                    )
                 }
 
+                // Selection Toolbar
                 if viewModel.isSelectionMode {
-                    selectionToolbar
+                    FavoritesSelectionToolbarView(
+                        isAllSelected: viewModel.isAllSelected,
+                        selectedCount: viewModel.selectedCount,
+                        onSelectAll: viewModel.selectAll,
+                        onDeselectAll: viewModel.deselectAll,
+                        onDelete: {
+                            showingDeleteAlert = true
+                        }
+                    )
                 }
 
-                if viewModel.isLoading {
-                    LoadingComponent(message: "Loading favorites...")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if viewModel.hasFavorites {
-                    favoritesGrid
-                } else {
-                    emptyStateView
+                // Content - Só mostra se não estiver carregando
+                if !viewModel.isLoading {
+                    if viewModel.hasFavorites {
+                        FavoritesGridView(
+                            filteredCharacters: viewModel.filteredCharacters,
+                            selectedCharacters: viewModel.selectedCharacters,
+                            isSelectionMode: viewModel.isSelectionMode,
+                            onCharacterTap: { character in
+                                if viewModel.isSelectionMode {
+                                    viewModel.toggleSelection(for: character)
+                                } else {
+                                    onCharacterSelected?(character)
+                                }
+                            },
+                            onCharacterRemove: viewModel.removeFavorite
+                        )
+                    } else {
+                        FavoritesEmptyStateView()
+                    }
                 }
+            }
+
+            // FullScreen Loading (substitui LoadingComponent)
+            if viewModel.isLoading {
+                FullScreenLoadingComponent(
+                    logoImage: "Loading",
+                    loadingText: "Loading favorites", // Sem os "..."
+                    onBack: {
+                        // Permite cancelar e voltar
+                        dismiss()
+                    }
+                )
+                .transition(.opacity)
+                .zIndex(1000)
             }
         }
         .navigationTitle("Favorites")
@@ -79,99 +120,6 @@ public struct FavoritesView: View {
         .sheet(isPresented: $showingShareSheet) {
             ShareSheetView(items: [viewModel.exportFavorites()])
         }
-    }
-
-    // MARK: - Header
-    private var headerView: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("My Favorites")
-                .font(.system(size: 34, weight: .bold))
-                .foregroundColor(themeManager.currentTheme.primaryText)
-
-            if viewModel.hasFavorites {
-                Text("\(viewModel.favoriteCharacters.count) Characters")
-                    .font(.subheadline)
-                    .foregroundColor(themeManager.currentTheme.secondaryText)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal)
-        .padding(.top, 10)
-        .padding(.bottom, viewModel.hasFavorites ? 10 : 20)
-    }
-
-    // MARK: - Search Bar
-    private var searchBar: some View {
-        HStack {
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(themeManager.currentTheme.tertiaryText)
-
-            TextField("Search favorites...", text: $viewModel.searchText)
-                .foregroundColor(themeManager.currentTheme.primaryText)
-                .autocorrectionDisabled()
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(themeManager.currentTheme.searchBarBackground)
-        .cornerRadius(10)
-        .padding(.horizontal)
-        .padding(.bottom, 10)
-    }
-
-    // MARK: - Sort Options
-    private var sortOptions: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
-                ForEach(FavoritesSortOption.allCases, id: \.self) { option in
-                    SortChipView(
-                        title: option.title,
-                        icon: option.icon,
-                        isSelected: viewModel.sortOption == option,
-                        action: { viewModel.updateSortOption(option) }
-                    )
-                }
-            }
-            .padding(.horizontal)
-            .padding(.bottom, 10)
-        }
-    }
-
-    // MARK: - Selection Toolbar
-    private var selectionToolbar: some View {
-        HStack {
-            Button(action: {
-                if viewModel.isAllSelected {
-                    viewModel.deselectAll()
-                } else {
-                    viewModel.selectAll()
-                }
-            }) {
-                Text(viewModel.isAllSelected ? "Deselect All" : "Select All")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(themeManager.currentTheme.primaryAccent)
-            }
-
-            Spacer()
-
-            Text("\(viewModel.selectedCount) selected")
-                .font(.caption)
-                .foregroundColor(themeManager.currentTheme.secondaryText)
-
-            Spacer()
-
-            Button(action: {
-                if viewModel.selectedCount > 0 {
-                    showingDeleteAlert = true
-                }
-            }) {
-                Image(systemName: "trash")
-                    .foregroundColor(viewModel.selectedCount > 0 ? themeManager.currentTheme.destructiveAccent : themeManager.currentTheme.tertiaryText)
-            }
-            .disabled(viewModel.selectedCount == 0)
-        }
-        .padding(.horizontal)
-        .padding(.vertical, 10)
-        .background(themeManager.currentTheme.tertiaryBackground.opacity(0.5))
     }
 
     // MARK: - Toolbar
@@ -201,58 +149,5 @@ public struct FavoritesView: View {
                 }
             }
         }
-    }
-
-    // MARK: - Favorites Grid
-    private var favoritesGrid: some View {
-        ScrollView {
-            LazyVGrid(columns: columns, spacing: 16) {
-                ForEach(viewModel.filteredCharacters) { character in
-                    FavoriteCardView(
-                        character: character,
-                        isSelected: viewModel.selectedCharacters.contains(character.id),
-                        isSelectionMode: viewModel.isSelectionMode,
-                        onTap: {
-                            if viewModel.isSelectionMode {
-                                viewModel.toggleSelection(for: character)
-                            } else {
-                                print("👆 [FavoritesView] Tapped on character: \(character.name) ID: \(character.id)")
-                                onCharacterSelected?(character)
-                            }
-                        },
-                        onRemove: {
-                            viewModel.removeFavorite(character)
-                        }
-                    )
-                }
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 10)
-        }
-    }
-
-    // MARK: - Empty State View
-    private var emptyStateView: some View {
-        VStack(spacing: 20) {
-            Spacer()
-
-            Image(systemName: "heart.slash")
-                .font(.system(size: 80))
-                .foregroundColor(themeManager.currentTheme.tertiaryText)
-
-            Text("No Favorites Yet")
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(themeManager.currentTheme.primaryText)
-
-            Text("Start adding your favorite Comic characters")
-                .font(.body)
-                .foregroundColor(themeManager.currentTheme.secondaryText)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-
-            Spacer()
-        }
-        .padding()
     }
 }

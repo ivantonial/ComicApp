@@ -69,10 +69,24 @@ struct StatCardComponent_Previews: PreviewProvider {
             )
 
             StatCardComponent(
-                icon: "tv.fill",
-                title: "Series",
+                icon: "person.2.fill",
+                title: "Friends",
                 value: "45",
                 color: .blue
+            )
+
+            StatCardComponent(
+                icon: "bolt.fill",
+                title: "Powers",
+                value: "45",
+                color: .yellow
+            )
+
+            StatCardComponent(
+                icon: "exclamationmark.triangle.fill",
+                title: "Enemies",
+                value: "45",
+                color: .green
             )
         }
         .padding()
