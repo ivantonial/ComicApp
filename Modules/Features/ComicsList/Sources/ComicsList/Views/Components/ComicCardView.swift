@@ -2,7 +2,7 @@
 //  ComicCardView.swift
 //  ComicsList
 //
-//  Created by Ivan Tonial IP.TV on 13/10/25.
+//  Created by Ivan Tonial IP.TV on 20/11/25.
 //
 
 import ComicVineAPI
