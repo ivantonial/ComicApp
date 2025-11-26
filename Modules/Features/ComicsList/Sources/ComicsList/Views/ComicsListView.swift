@@ -95,7 +95,7 @@ public struct ComicsListView: View {
             if viewModel.isLoading && viewModel.comics.isEmpty {
                 FullScreenLoadingComponent(
                     logoImage: "Loading",
-                    loadingText: "Loading comics", // Sem os "..."
+                    loadingText: "Loading Comics", // Sem os "..."
                     onBack: {
                         // Cancela e volta
                         dismiss()
