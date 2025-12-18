@@ -137,6 +137,13 @@ public struct IssueSummary: Decodable, Sendable {
         case apiDetailUrl = "api_detail_url"
         case issueNumber = "issue_number"
     }
+
+    public init(id: Int, name: String?, apiDetailUrl: String?, issueNumber: String?) {
+        self.id = id
+        self.name = name
+        self.apiDetailUrl = apiDetailUrl
+        self.issueNumber = issueNumber
+    }
 }
 
 public struct OriginSummary: Decodable, Sendable {
@@ -172,6 +179,13 @@ public struct CharacterReference: Decodable, Sendable {
         case apiDetailUrl = "api_detail_url"
         case siteDetailUrl = "site_detail_url"
     }
+
+    public init(id: Int, name: String, apiDetailUrl: String?, siteDetailUrl: String?) {
+        self.id = id
+        self.name = name
+        self.apiDetailUrl = apiDetailUrl
+        self.siteDetailUrl = siteDetailUrl
+    }
 }
 
 public struct CreatorReference: Decodable, Sendable {
@@ -185,6 +199,13 @@ public struct CreatorReference: Decodable, Sendable {
         case name
         case apiDetailUrl = "api_detail_url"
         case siteDetailUrl = "site_detail_url"
+    }
+
+    public init(id: Int, name: String, apiDetailUrl: String?, siteDetailUrl: String?) {
+        self.id = id
+        self.name = name
+        self.apiDetailUrl = apiDetailUrl
+        self.siteDetailUrl = siteDetailUrl
     }
 }
 
@@ -200,6 +221,13 @@ public struct IssueCredit: Decodable, Sendable {
         case apiDetailUrl = "api_detail_url"
         case siteDetailUrl = "site_detail_url"
     }
+
+    public init(id: Int, name: String?, apiDetailUrl: String?, siteDetailUrl: String?) {
+        self.id = id
+        self.name = name
+        self.apiDetailUrl = apiDetailUrl
+        self.siteDetailUrl = siteDetailUrl
+    }
 }
 
 public struct PowerReference: Decodable, Sendable {
@@ -211,6 +239,12 @@ public struct PowerReference: Decodable, Sendable {
         case id
         case name
         case apiDetailUrl = "api_detail_url"
+    }
+
+    public init(id: Int, name: String, apiDetailUrl: String?) {
+        self.id = id
+        self.name = name
+        self.apiDetailUrl = apiDetailUrl
     }
 }
 
@@ -226,6 +260,13 @@ public struct TeamReference: Decodable, Sendable {
         case apiDetailUrl = "api_detail_url"
         case siteDetailUrl = "site_detail_url"
     }
+
+    public init(id: Int, name: String, apiDetailUrl: String?, siteDetailUrl: String?) {
+        self.id = id
+        self.name = name
+        self.apiDetailUrl = apiDetailUrl
+        self.siteDetailUrl = siteDetailUrl
+    }
 }
 
 public struct VolumeCredit: Decodable, Sendable {
@@ -239,6 +280,13 @@ public struct VolumeCredit: Decodable, Sendable {
         case name
         case apiDetailUrl = "api_detail_url"
         case siteDetailUrl = "site_detail_url"
+    }
+
+    public init(id: Int, name: String, apiDetailUrl: String?, siteDetailUrl: String?) {
+        self.id = id
+        self.name = name
+        self.apiDetailUrl = apiDetailUrl
+        self.siteDetailUrl = siteDetailUrl
     }
 }
 

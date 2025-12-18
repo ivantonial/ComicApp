@@ -41,11 +41,16 @@ let package = Package(
                 "Favorites",
                 "Search",
                 "Settings"
-            ]
+            ],
+            path: "Sources/AppCoordinator"
         ),
         .testTarget(
             name: "AppCoordinatorTests",
-            dependencies: ["AppCoordinator"]
+            dependencies: [
+                "AppCoordinator",
+                "ComicVineAPI"
+            ],
+            path: "Tests/AppCoordinatorTests"
         ),
     ]
 )

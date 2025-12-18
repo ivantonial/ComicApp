@@ -35,7 +35,7 @@ public struct CharacterDetailView: View {
             if viewModel.isLoading && !hasLoadedOnce {
                 FullScreenLoadingComponent(
                     logoImage: "Loading", // Use o nome correto da imagem
-                    loadingText: "Loading",
+                    loadingText: "Loading Details",
                     onBack: {
                         print("🔙 Cancelling loading and going back")
                         viewModel.cancelLoading()

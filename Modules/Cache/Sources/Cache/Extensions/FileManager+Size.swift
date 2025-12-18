@@ -44,12 +44,17 @@ public extension FileManager {
     }
 
     /// Calcula o tamanho de um diretório de forma assíncrona
+    /// Usa FileManager.default explicitamente para evitar captura de 'self' em closure @Sendable
     func sizeOfDirectoryAsync(at url: URL) async throws -> Int {
-        // Usa withCheckedThrowingContinuation para thread-safety sem precisar de @Sendable
+        // Captura a URL como valor antes de entrar no contexto assíncrono
+        let targetURL = url
+
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 do {
-                    let size = try self.sizeOfDirectory(at: url)
+                    // Usa FileManager.default ao invés de self para evitar data race
+                    // FileManager.default é thread-safe como instância singleton
+                    let size = try FileManager.default.sizeOfDirectory(at: targetURL)
                     continuation.resume(returning: size)
                 } catch {
                     continuation.resume(throwing: error)
@@ -176,22 +181,51 @@ public extension FileManager {
     }
 
     /// Verifica se há espaço suficiente no dispositivo
+    /// - Parameter bytes: Quantidade de bytes necessários
+    /// - Returns: true se há espaço suficiente (com margem de segurança de 100MB)
     func hasEnoughSpace(for bytes: Int64) -> Bool {
         guard let freeSpace = deviceFreeSpace else { return false }
-        // Mantém uma margem de segurança de 100MB
+
+        // Margem de segurança de 100MB
         let safetyMargin: Int64 = 100 * 1024 * 1024
-        return freeSpace > (bytes + safetyMargin)
+
+        // Verifica overflow antes de somar
+        // Se bytes é muito grande (próximo de Int64.max), a soma causaria overflow
+        // Nesse caso, definitivamente não há espaço suficiente
+        let (sum, overflow) = bytes.addingReportingOverflow(safetyMargin)
+
+        if overflow {
+            // Se houve overflow, o valor solicitado é absurdamente grande
+            // Não há como ter espaço suficiente
+            return false
+        }
+
+        return freeSpace > sum
     }
 }
 
 // MARK: - Supporting Types
 
-public struct DirectorySizeInfo {
+public struct DirectorySizeInfo: Sendable {
     public let totalSize: Int
     public let fileCount: Int
     public let directoryCount: Int
     public let largestFile: (url: URL, size: Int)?
     public let sizeByExtension: [String: Int]
+
+    public init(
+        totalSize: Int,
+        fileCount: Int,
+        directoryCount: Int,
+        largestFile: (url: URL, size: Int)?,
+        sizeByExtension: [String: Int]
+    ) {
+        self.totalSize = totalSize
+        self.fileCount = fileCount
+        self.directoryCount = directoryCount
+        self.largestFile = largestFile
+        self.sizeByExtension = sizeByExtension
+    }
 
     public var formattedTotalSize: String {
         ByteCountFormatter.string(fromByteCount: Int64(totalSize), countStyle: .binary)
