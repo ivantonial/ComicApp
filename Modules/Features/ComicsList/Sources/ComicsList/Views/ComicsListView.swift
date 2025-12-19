@@ -46,27 +46,63 @@ public struct ComicsListView: View {
             Color.black
                 .ignoresSafeArea()
 
+            // Main Content
             VStack(spacing: 0) {
                 // Header
-                headerView
+                ComicsListHeaderView(
+                    character: viewModel.character,
+                    totalComics: viewModel.totalComics,
+                    onBack: { dismiss() }
+                )
 
-                // Content
-                if viewModel.isLoading && viewModel.comics.isEmpty {
-                    Spacer()
-                    LoadingComponent(message: "Loading comics...")
-                    Spacer()
-                } else if let error = viewModel.error, viewModel.comics.isEmpty {
-                    Spacer()
-                    ErrorComponent(
-                        message: error.localizedDescription,
-                        retryAction: viewModel.refresh
+                // Filter Pills
+                if viewModel.hasFilters {
+                    ComicsListFilterPillsView(
+                        selectedFilter: viewModel.selectedFilter,
+                        onFilterSelected: viewModel.selectFilter
                     )
-                    Spacer()
-                } else if viewModel.comics.isEmpty {
-                    emptyStateView
-                } else {
-                    comicsGrid
                 }
+
+                // Content - Só mostra se não estiver carregando ou se já tiver comics
+                if !viewModel.isLoading || !viewModel.comics.isEmpty {
+                    if let error = viewModel.error, viewModel.comics.isEmpty {
+                        Spacer()
+                        ErrorComponent(
+                            message: error.localizedDescription,
+                            retryAction: viewModel.refresh
+                        )
+                        Spacer()
+                    } else if viewModel.comics.isEmpty {
+                        ComicsListEmptyStateView()
+                    } else {
+                        ComicsListGridView(
+                            comics: viewModel.filteredComics,
+                            isLoading: viewModel.isLoading,
+                            gridColumns: gridColumns,
+                            onComicSelected: viewModel.selectComic,
+                            onLoadMore: { comic in
+                                viewModel.loadMoreIfNeeded(currentComic: comic)
+                            }
+                        )
+                        .refreshable {
+                            await refreshData()
+                        }
+                    }
+                }
+            }
+
+            // FullScreen Loading (substitui LoadingComponent)
+            if viewModel.isLoading && viewModel.comics.isEmpty {
+                FullScreenLoadingComponent(
+                    logoImage: "Loading",
+                    loadingText: "Loading Comics", // Sem os "..."
+                    onBack: {
+                        // Cancela e volta
+                        dismiss()
+                    }
+                )
+                .transition(.opacity)
+                .zIndex(1000)
             }
         }
         .navigationBarHidden(true)
@@ -75,137 +111,6 @@ public struct ComicsListView: View {
                 viewModel.loadInitialData()
             }
         }
-    }
-
-    // MARK: - Header View
-    private var headerView: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Button(action: {
-                    dismiss()
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .semibold))
-
-                        Text("Back")
-                            .font(.system(size: 16, weight: .medium))
-                    }
-                    .foregroundColor(.white)
-                }
-
-                Spacer()
-
-                if viewModel.totalComics > 0 {
-                    Text("\(viewModel.totalComics) Comics")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(
-                            Capsule()
-                                .fill(Color.white.opacity(0.1))
-                        )
-                }
-            }
-            .padding(.horizontal)
-            .padding(.top, 50)
-            .padding(.bottom, 10)
-
-            VStack(spacing: 8) {
-                Text(viewModel.character.name)
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                Text("Comics Collection")
-                    .font(.system(size: 16))
-                    .foregroundColor(.gray)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .padding(.horizontal)
-            .padding(.bottom, 10)
-
-            // Filter Pills
-            if viewModel.hasFilters {
-                filterPills
-            }
-        }
-        .background(Color.black)
-    }
-
-    // MARK: - Filter Pills
-    private var filterPills: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
-                ForEach(ComicFilter.allCases, id: \.self) { filter in
-                    FilterPillComponent(
-                        title: filter.title,
-                        isSelected: viewModel.selectedFilter == filter,
-                        style: .primary,
-                        selectedColor: .red,
-                        action: {
-                            viewModel.selectFilter(filter)
-                        }
-                    )
-                }
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 10)
-        }
-    }
-
-    // MARK: - Comics Grid usando ContentCardComponent
-    private var comicsGrid: some View {
-        ScrollView {
-            LazyVGrid(columns: gridColumns, spacing: 16) {
-                ForEach(viewModel.filteredComics) { comic in
-                    ComicCardView(model: ComicCardModel(from: comic)) {
-                        viewModel.selectComic(comic)
-                    }
-                    .onAppear {
-                        viewModel.loadMoreIfNeeded(currentComic: comic)
-                    }
-                }
-
-                if viewModel.isLoading && !viewModel.comics.isEmpty {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .gridCellColumns(gridColumns.count)
-                }
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 10)
-        }
-        .refreshable {
-            await refreshData()
-        }
-    }
-
-    // MARK: - Empty State
-    private var emptyStateView: some View {
-        VStack(spacing: 20) {
-            Spacer()
-
-            Image(systemName: "book.closed")
-                .font(.system(size: 80))
-                .foregroundColor(.gray)
-
-            Text("No Comics Available")
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(.white)
-
-            Text("This character doesn't have any comics yet.")
-                .font(.body)
-                .foregroundColor(.gray)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-
-            Spacer()
-        }
-        .padding()
     }
 
     private func refreshData() async {

@@ -1,301 +1,111 @@
+//
+//  NetworkingTests.swift
+//  Networking
+//
+//  Created by Ivan Tonial IP.TV on 09/10/25.
+//
+//  NOTA: Este arquivo serve como ponto de entrada para os testes do módulo Networking.
+//  Os testes estão organizados em arquivos separados seguindo a arquitetura modular:
+//
+//  Estrutura dos testes:
+//  ├── Doubles/
+//  │   ├── MockNetworkService.swift           - Mock do NetworkServiceProtocol para testes isolados
+//  │   └── MockURLProtocol.swift              - Mock do URLProtocol para testes de integração
+//  ├── Fixtures/
+//  │   ├── MockEndpointFixture.swift          - Fixture de APIEndpoint para testes
+//  │   └── MockResponseFixture.swift          - Fixture de resposta para testes
+//  ├── Models/
+//  │   └── NetworkErrorTests.swift            - Testes do NetworkError
+//  └── Services/
+//      └── NetworkServiceTests.swift          - Testes do NetworkService
+//
+//  Uso dos Mocks:
+//  - MockNetworkService: Usado para testes que precisam simular o comportamento
+//    do NetworkServiceProtocol sem fazer requisições reais
+//  - MockURLProtocol: Usado para testes de integração que precisam interceptar
+//    requisições HTTP e retornar respostas controladas
+//
+
 import Alamofire
-@testable import Core
 @testable import Networking
+import Foundation
 import Testing
 import XCTest
 
-// MARK: - Mock Endpoint
-struct MockEndpoint: APIEndpoint {
-    var baseURL: String = "https://api.example.com"
-    var path: String = "/test"
-    var method: HTTPMethod = .get
-    var headers: HTTPHeaders?
-    var parameters: Parameters?
-    var encoding: ParameterEncoding = URLEncoding.default
-}
+// MARK: - Networking Module Export Tests
 
-// MARK: - Mock Response Model
-struct MockResponse: Codable, Equatable {
-    let id: Int
-    let name: String
-}
+@Suite("Networking Module Export Tests")
+struct NetworkingModuleExportTests {
 
-// MARK: - Mock NetworkService Protocol
-final class MockNetworkService: NetworkServiceProtocol, @unchecked Sendable {
-    var mockResult: Result<Any, Error>?
-
-    func request<T: Decodable>(_ endpoint: APIEndpoint, responseType: T.Type) async throws -> T {
-        guard let result = mockResult else {
-            throw NetworkError.noData
-        }
-
-        switch result {
-        case .success(let data):
-            if let typedData = data as? T {
-                return typedData
-            } else {
-                throw NetworkError.decodingError(NSError(domain: "MockError", code: 0))
-            }
-        case .failure(let error):
-            throw error
-        }
-    }
-}
-
-// MARK: - Mock Session Factory
-struct MockSessionFactory {
-    static func createMockSession() -> Session {
-        let config = URLSessionConfiguration.ephemeral
-        config.protocolClasses = [MockURLProtocol.self]
-
-        return Session(
-            configuration: config,
-            delegate: SessionDelegate(),
-            rootQueue: DispatchQueue(label: "mock.session.rootQueue"),
-            startRequestsImmediately: true
-        )
-    }
-}
-
-// MARK: - Mock URL Protocol com thread-safety
-actor MockURLProtocolStorage {
-    static let shared = MockURLProtocolStorage()
-
-    var mockData: Data?
-    var mockError: Error?
-    var mockStatusCode: Int = 200
-
-    private init() {}
-
-    func setMockData(_ data: Data?) {
-        mockData = data
+    @Test("Networking module should export NetworkError")
+    func testNetworkErrorExport() {
+        // Valida que NetworkError está acessível
+        let error = NetworkError.invalidURL
+        #expect(error.errorDescription != nil)
     }
 
-    func setMockError(_ error: Error?) {
-        mockError = error
+    @Test("Networking module should export NetworkServiceProtocol")
+    func testNetworkServiceProtocolExport() {
+        // Valida que NetworkServiceProtocol está acessível
+        // O protocolo é validado pela existência do mock que o implementa
+        let mockService = MockNetworkService()
+
+        // Verifica que o mock pode ser usado como NetworkServiceProtocol
+        let _: any NetworkServiceProtocol = mockService
+
+        // Verifica propriedades do mock
+        #expect(mockService.requestCallCount == 0)
     }
 
-    func setMockStatusCode(_ code: Int) {
-        mockStatusCode = code
-    }
-
-    func getMockData() -> Data? {
-        mockData
-    }
-
-    func getMockError() -> Error? {
-        mockError
-    }
-
-    func getMockStatusCode() -> Int {
-        mockStatusCode
-    }
-}
-
-class MockURLProtocol: URLProtocol, @unchecked Sendable {
-
-    override class func canInit(with request: URLRequest) -> Bool {
-        return true
-    }
-
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest {
-        return request
-    }
-
-    override func startLoading() {
-        guard let client = self.client, let url = request.url else {
+    @Test("Networking module should export NetworkService")
+    func testNetworkServiceExport() {
+        guard #available(iOS 16.0, *) else {
+            #expect(true)
             return
         }
 
-        // Usar apenas DispatchQueue para evitar problemas de concorrência
-        DispatchQueue.global().async { [weak self] in
-            guard let self = self else { return }
+        // Valida que NetworkService está acessível
+        let service = NetworkService()
 
-            Task { @MainActor in
-                let storage = MockURLProtocolStorage.shared
+        // Verifica que o service pode ser usado como NetworkServiceProtocol
+        let _: any NetworkServiceProtocol = service
 
-                if let error = await storage.getMockError() {
-                    client.urlProtocol(self, didFailWithError: error)
-                } else {
-                    let statusCode = await storage.getMockStatusCode()
-                    let response = HTTPURLResponse(
-                        url: url,
-                        statusCode: statusCode,
-                        httpVersion: nil,
-                        headerFields: nil
-                    )!
-
-                    client.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-
-                    if let data = await storage.getMockData() {
-                        client.urlProtocol(self, didLoad: data)
-                    }
-
-                    client.urlProtocolDidFinishLoading(self)
-                }
-            }
-        }
+        // Teste passou - NetworkService está disponível e conforma com o protocolo
+        #expect(true)
     }
 
-    override func stopLoading() {}
+    @Test("Networking module should export APIEndpoint protocol")
+    func testAPIEndpointProtocolExport() {
+        // Valida que APIEndpoint está acessível
+        let endpoint = MockEndpoint.defaultFixture()
+        #expect(endpoint.baseURL == "https://api.example.com")
+        #expect(endpoint.path == "/test")
+    }
 }
 
-// MARK: - NetworkService Tests using Swift Testing
-@Suite("NetworkService Tests")
-struct NetworkServiceTests {
+// MARK: - NetworkError Equatable Extension for Tests
 
-    @Test("Should successfully decode response using mock protocol")
-    func testSuccessfulRequestWithMockProtocol() async throws {
-        // Arrange
-        let mockResponse = MockResponse(id: 1, name: "Test")
-        let mockNetworkService = MockNetworkService()
-        mockNetworkService.mockResult = .success(mockResponse)
-        let endpoint = MockEndpoint()
-
-        // Act
-        let result = try await mockNetworkService.request(endpoint, responseType: MockResponse.self)
-
-        // Assert
-        #expect(result == mockResponse)
-    }
-
-    @Test("Should throw decoding error using mock protocol")
-    func testDecodingErrorWithMockProtocol() async {
-        // Arrange
-        let mockNetworkService = MockNetworkService()
-        mockNetworkService.mockResult = .failure(NetworkError.decodingError(NSError(domain: "Test", code: 0)))
-        let endpoint = MockEndpoint()
-
-        // Act & Assert
-        do {
-            _ = try await mockNetworkService.request(endpoint, responseType: MockResponse.self)
-            #expect(Bool(false), "Should throw decoding error")
-        } catch {
-            if case NetworkError.decodingError = error {
-                #expect(true)
-            } else {
-                #expect(Bool(false), "Wrong error type: \(error)")
-            }
+extension NetworkError: Equatable {
+    public static func == (lhs: NetworkError, rhs: NetworkError) -> Bool {
+        switch (lhs, rhs) {
+        case (.invalidURL, .invalidURL):
+            return true
+        case (.serverErrorMessage(let lhsMsg), .serverErrorMessage(let rhsMsg)):
+            return lhsMsg == rhsMsg
+        case (.serverErrorCode(let lhsCode), .serverErrorCode(let rhsCode)):
+            return lhsCode == rhsCode
+        case (.noData, .noData):
+            return true
+        case (.unauthorized, .unauthorized):
+            return true
+        case (.notFound, .notFound):
+            return true
+        case (.decodingError, .decodingError):
+            return true
+        case (.unknown, .unknown):
+            return true
+        default:
+            return false
         }
-    }
-
-    @Test("Should throw server error using mock protocol")
-    func testServerErrorWithMockProtocol() async {
-        // Arrange
-        let mockNetworkService = MockNetworkService()
-        mockNetworkService.mockResult = .failure(NetworkError.serverError(500))
-        let endpoint = MockEndpoint()
-
-        // Act & Assert
-        do {
-            _ = try await mockNetworkService.request(endpoint, responseType: MockResponse.self)
-            #expect(Bool(false), "Should throw server error")
-        } catch {
-            if case NetworkError.serverError(let code) = error {
-                #expect(code == 500)
-            } else {
-                #expect(Bool(false), "Wrong error type: \(error)")
-            }
-        }
-    }
-
-    @Test("Should successfully decode response with real implementation")
-    @available(iOS 16.0, *)
-    func testSuccessfulRequestWithRealImplementation() async throws {
-        // Arrange
-        let mockResponse = MockResponse(id: 1, name: "Test")
-        let mockData = try JSONEncoder().encode(mockResponse)
-
-        let storage = MockURLProtocolStorage.shared
-        await storage.setMockData(mockData)
-        await storage.setMockStatusCode(200)
-        await storage.setMockError(nil)
-
-        let session = MockSessionFactory.createMockSession()
-        let networkService = NetworkService(session: session)
-        let endpoint = MockEndpoint()
-
-        // Act
-        let result = try await networkService.request(endpoint, responseType: MockResponse.self)
-
-        // Assert
-        #expect(result == mockResponse)
-    }
-
-    @Test("Should throw decoding error for invalid JSON with real implementation")
-    @available(iOS 16.0, *)
-    func testDecodingErrorWithRealImplementation() async {
-        // Arrange
-        let invalidJSON = "{ invalid json }".data(using: .utf8)!
-
-        let storage = MockURLProtocolStorage.shared
-        await storage.setMockData(invalidJSON)
-        await storage.setMockStatusCode(200)
-        await storage.setMockError(nil)
-
-        let session = MockSessionFactory.createMockSession()
-        let networkService = NetworkService(session: session)
-        let endpoint = MockEndpoint()
-
-        // Act & Assert
-        do {
-            _ = try await networkService.request(endpoint, responseType: MockResponse.self)
-            #expect(Bool(false), "Should throw decoding error")
-        } catch {
-            if case NetworkError.decodingError = error {
-                #expect(true)
-            } else {
-                #expect(Bool(false), "Wrong error type: \(error)")
-            }
-        }
-    }
-
-    @Test("Should throw server error for 500 status code with real implementation")
-    @available(iOS 16.0, *)
-    func testServerErrorWithRealImplementation() async {
-        // Arrange
-        let storage = MockURLProtocolStorage.shared
-        await storage.setMockData(nil)
-        await storage.setMockStatusCode(500)
-        await storage.setMockError(nil)
-
-        let session = MockSessionFactory.createMockSession()
-        let networkService = NetworkService(session: session)
-        let endpoint = MockEndpoint()
-
-        // Act & Assert
-        do {
-            _ = try await networkService.request(endpoint, responseType: MockResponse.self)
-            #expect(Bool(false), "Should throw server error")
-        } catch {
-            if case NetworkError.serverError(let code) = error {
-                #expect(code == 500)
-            } else {
-                #expect(Bool(false), "Wrong error type: \(error)")
-            }
-        }
-    }
-
-    @Test("NetworkError should provide proper descriptions")
-    func testNetworkErrorDescriptions() {
-        // Test invalid URL error
-        let invalidURLError = NetworkError.invalidURL
-        #expect(invalidURLError.errorDescription == "URL inválida")
-
-        // Test no data error
-        let noDataError = NetworkError.noData
-        #expect(noDataError.errorDescription == "Nenhum dado recebido")
-
-        // Test server error
-        let serverError = NetworkError.serverError(404)
-        #expect(serverError.errorDescription == "Erro do servidor: 404")
-
-        // Test decoding error
-        let decodingError = NetworkError.decodingError(NSError(domain: "", code: 0))
-        #expect(decodingError.errorDescription?.contains("Erro ao decodificar") == true)
-
-        // Test unknown error
-        let unknownError = NetworkError.unknown(NSError(domain: "test", code: 0))
-        #expect(unknownError.errorDescription?.contains("Erro desconhecido") == true)
     }
 }

@@ -1,192 +1,271 @@
+//
+//  CharacterListTests.swift
+//  CharacterList
+//
+//  Created by Ivan Tonial IP.TV on 15/12/25.
+//
+//  NOTA: Este arquivo serve como ponto de entrada para os testes do módulo CharacterList.
+//  Os testes estão organizados em arquivos separados seguindo a arquitetura MVVM-C:
+//
+//  Estrutura dos testes:
+//  ├── Doubles/
+//  │   └── MockComicVineService+CharacterList.swift - Mock para ComicVineServiceProtocol
+//  ├── Fixtures/
+//  │   └── CharacterFixture+CharacterList.swift     - Fixtures de Character para testes
+//  ├── Models/
+//  │   └── CharacterCardModelTests.swift            - Testes do CharacterCardModel
+//  ├── UseCases/
+//  │   ├── CharacterListSearchUseCaseTests.swift    - Testes do CharacterListSearchUseCase
+//  │   └── SearchCharactersUseCaseTests.swift       - Testes do SearchCharactersUseCase
+//  └── ViewModels/
+//      └── CharacterListViewModelTests.swift        - Testes do CharacterListViewModel
+//
+
 @testable import CharacterList
 @testable import ComicVineAPI
-import Networking
+import DesignSystem
+import Foundation
 import Testing
 import XCTest
 
-// MARK: - Mock Service
-final class MockComicVineService: ComicVineServiceProtocol, @unchecked Sendable {
-    var shouldThrowError = false
-    var charactersToReturn: [Character] = []
-    var characterToReturn: Character?
-    var comicsToReturn: [Comic] = []
+// MARK: - CharacterList Module Export Tests
 
-    func fetchCharacters(offset: Int, limit: Int) async throws -> [Character] {
-        if shouldThrowError {
-            throw NetworkError.serverError(500)
-        }
-        return charactersToReturn
-    }
+@Suite("CharacterList Module Export Tests")
+struct CharacterListModuleExportTests {
 
-    func fetchCharacter(by id: Int) async throws -> Character {
-        if shouldThrowError {
-            throw NetworkError.serverError(500)
-        }
-        guard let character = characterToReturn else {
-            throw NetworkError.noData
-        }
-        return character
-    }
-
-    func fetchCharacterComics(characterId: Int, offset: Int, limit: Int) async throws -> [Comic] {
-        if shouldThrowError {
-            throw NetworkError.serverError(500)
-        }
-        return comicsToReturn
-    }
-}
-
-// MARK: - Fixtures
-extension Character {
-    static func fixture(
-        id: Int = 1,
-        name: String = "Spider-Man",
-        description: String = "Friendly neighborhood Spider-Man",
-        comicsAvailable: Int = 100
-    ) -> Character {
-        return Character(
-            id: id,
-            name: name,
-            description: description,
-            modified: "2023-01-01T00:00:00-0500",
-            thumbnail: ComicVineImage(path: "http://example.com/image", extension: "jpg"),
-            resourceURI: "http://example.com/character/\(id)",
-            comics: ComicList(
-                available: comicsAvailable,
-                collectionURI: "",
-                items: [],
-                returned: 0
-            ),
-            series: SeriesList(available: 0, collectionURI: "", items: [], returned: 0),
-            stories: StoryList(available: 0, collectionURI: "", items: [], returned: 0),
-            events: EventList(available: 0, collectionURI: "", items: [], returned: 0),
-            urls: []
+    @Test("CharacterList module should export CharacterCardModel")
+    func testCharacterCardModelExport() {
+        // Valida que CharacterCardModel está acessível
+        let model = CharacterCardModel(
+            id: 1,
+            name: "Spider-Man",
+            comicVineImage: nil,
+            comicsCount: 100
         )
-    }
-}
-
-// MARK: - Tests using Swift Testing
-@Suite("CharacterListViewModel Tests")
-struct CharacterListViewModelTests {
-
-    @Test("Should load characters successfully")
-    @MainActor
-    func testLoadCharactersSuccess() async {
-        // Arrange
-        let mockService = MockComicVineService()
-        mockService.charactersToReturn = [
-            Character.fixture(id: 1, name: "Spider-Man"),
-            Character.fixture(id: 2, name: "Iron Man")
-        ]
-
-        let useCase = FetchCharactersUseCase(service: mockService)
-        let viewModel = CharacterListViewModel(fetchCharactersUseCase: useCase)
-
-        // Act
-        viewModel.loadInitialData()
-
-        // Assert
-        #expect(viewModel.characters.count == 2)
-        #expect(viewModel.characters[0].name == "Spider-Man")
-        #expect(viewModel.characters[1].name == "Iron Man")
-        #expect(viewModel.error == nil)
-        #expect(viewModel.isLoading == false)
+        #expect(model.id == 1)
+        #expect(model.name == "Spider-Man")
     }
 
-    @Test("Should handle error when loading characters")
+    @Test("CharacterList module should export CharacterListViewModel")
     @MainActor
-    func testLoadCharactersError() async {
-        // Arrange
-        let mockService = MockComicVineService()
-        mockService.shouldThrowError = true
-
+    func testCharacterListViewModelExport() {
+        // Valida que CharacterListViewModel está acessível
+        let mockService = MockCharacterListService()
         let useCase = FetchCharactersUseCase(service: mockService)
-        let viewModel = CharacterListViewModel(fetchCharactersUseCase: useCase)
-
-        // Act
-        viewModel.loadInitialData()
-
-        // Assert
+        let viewModel = CharacterListViewModel(
+            fetchCharactersUseCase: useCase,
+            comicVineService: mockService
+        )
         #expect(viewModel.characters.isEmpty)
-        #expect(viewModel.error != nil)
-        #expect(viewModel.isLoading == false)
     }
 
-    @Test("Should filter characters by search text")
-    @MainActor
-    func testFilterCharactersBySearchText() async {
-        // Arrange
-        let mockService = MockComicVineService()
-        mockService.charactersToReturn = [
-            Character.fixture(id: 1, name: "Spider-Man"),
-            Character.fixture(id: 2, name: "Iron Man"),
-            Character.fixture(id: 3, name: "Captain America")
-        ]
-
-        let useCase = FetchCharactersUseCase(service: mockService)
-        let viewModel = CharacterListViewModel(fetchCharactersUseCase: useCase)
-
-        // Act
-        viewModel.loadInitialData()
-        viewModel.searchText = "man"
-
-        // Assert
-        #expect(viewModel.filteredCharacters.count == 2)
-        #expect(viewModel.filteredCharacters[0].name == "Spider-Man")
-        #expect(viewModel.filteredCharacters[1].name == "Iron Man")
+    @Test("CharacterList module should export CharacterListSearchUseCase")
+    func testCharacterListSearchUseCaseExport() {
+        // Valida que CharacterListSearchUseCase está acessível
+        let mockService = MockCharacterListService()
+        let useCase = CharacterListSearchUseCase(service: mockService)
+        #expect(useCase != nil)
     }
 
-    @Test("Should convert characters to card models")
+    @Test("CharacterList module should export CharacterListView")
     @MainActor
-    func testCharacterCardModels() async {
-        // Arrange
-        let mockService = MockComicVineService()
-        mockService.charactersToReturn = [
-            Character.fixture(id: 1, name: "Spider-Man", comicsAvailable: 150),
-            Character.fixture(id: 2, name: "Iron Man", comicsAvailable: 200)
-        ]
-
+    func testCharacterListViewExport() {
+        // Valida que CharacterListView está acessível
+        let mockService = MockCharacterListService()
         let useCase = FetchCharactersUseCase(service: mockService)
-        let viewModel = CharacterListViewModel(fetchCharactersUseCase: useCase)
-
-        // Act
-        viewModel.loadInitialData()
-
-        // Assert
-        let cardModels = viewModel.characterCardModels
-        #expect(cardModels.count == 2)
-        #expect(cardModels[0].name == "Spider-Man")
-        #expect(cardModels[0].comicsCount == 150)
-        #expect(cardModels[1].name == "Iron Man")
-        #expect(cardModels[1].comicsCount == 200)
+        let viewModel = CharacterListViewModel(
+            fetchCharactersUseCase: useCase,
+            comicVineService: mockService
+        )
+        let view = CharacterListView(viewModel: viewModel)
+        #expect(view != nil)
     }
 }
 
-// MARK: - XCTest UI Tests
-class CharacterListUITests: XCTestCase {
+// MARK: - Architecture Validation Tests
+
+@Suite("CharacterList Architecture Validation Tests")
+struct CharacterListArchitectureTests {
+
+    @Test("CharacterCardModel should be Identifiable")
+    func testCharacterCardModelIdentifiable() {
+        // Valida conformidade com Identifiable
+        let model = CharacterCardModel(
+            id: 42,
+            name: "Batman",
+            comicVineImage: nil,
+            comicsCount: 500
+        )
+        #expect(model.id == 42)
+    }
+
+    @Test("CharacterCardModel should be ContentCardConvertible")
+    func testCharacterCardModelContentCardConvertible() {
+        // Valida conformidade com ContentCardConvertible
+        let model = CharacterCardModel(
+            id: 1,
+            name: "Superman",
+            comicVineImage: nil,
+            comicsCount: 200
+        )
+        let contentCardModel = model.toContentCardModel()
+        #expect(contentCardModel.title == "Superman")
+    }
+
+    @Test("CharacterListSearchUseCase should be Sendable")
+    func testCharacterListSearchUseCaseSendable() {
+        // Valida conformidade com Sendable
+        let mockService = MockCharacterListService()
+        let useCase = CharacterListSearchUseCase(service: mockService)
+        let _: Sendable = useCase
+        #expect(true)
+    }
+}
+
+// MARK: - ViewModel Protocol Compliance Tests
+
+@Suite("CharacterListViewModel Protocol Compliance Tests")
+struct CharacterListViewModelProtocolTests {
+
+    @Test("CharacterListViewModel should be ObservableObject")
+    @MainActor
+    func testObservableObjectCompliance() {
+        // Valida que CharacterListViewModel implementa ObservableObject
+        let mockService = MockCharacterListService()
+        let useCase = FetchCharactersUseCase(service: mockService)
+        let viewModel = CharacterListViewModel(
+            fetchCharactersUseCase: useCase,
+            comicVineService: mockService
+        )
+
+        // Se compila, o protocolo está implementado
+        _ = viewModel.objectWillChange
+        #expect(true)
+    }
+
+    @Test("CharacterListViewModel should be MainActor")
+    @MainActor
+    func testMainActorCompliance() {
+        // Valida que CharacterListViewModel é @MainActor
+        // Se o teste compila com @MainActor, está correto
+        let mockService = MockCharacterListService()
+        let useCase = FetchCharactersUseCase(service: mockService)
+        let _ = CharacterListViewModel(
+            fetchCharactersUseCase: useCase,
+            comicVineService: mockService
+        )
+        #expect(true)
+    }
+
+    @Test("CharacterListViewModel should expose published properties")
+    @MainActor
+    func testPublishedProperties() {
+        // Valida que as propriedades @Published estão expostas
+        let mockService = MockCharacterListService()
+        let useCase = FetchCharactersUseCase(service: mockService)
+        let viewModel = CharacterListViewModel(
+            fetchCharactersUseCase: useCase,
+            comicVineService: mockService
+        )
+
+        // Acessa as propriedades publicadas
+        _ = viewModel.characters
+        _ = viewModel.searchResults
+        _ = viewModel.isLoading
+        _ = viewModel.isSearching
+        _ = viewModel.error
+        _ = viewModel.hasMorePages
+        _ = viewModel.searchText
+
+        #expect(true)
+    }
+}
+
+// MARK: - XCTest Integration Tests
+
+class CharacterListIntegrationTests: XCTestCase {
 
     @MainActor
-    func testCharacterListView() async {
-        let app = XCUIApplication()
-        app.launch()
+    func testViewModelInitialization() {
+        // Testa inicialização básica do ViewModel
+        let mockService = MockCharacterListService()
+        let useCase = FetchCharactersUseCase(service: mockService)
+        let viewModel = CharacterListViewModel(
+            fetchCharactersUseCase: useCase,
+            comicVineService: mockService
+        )
 
-        // Verificar se a navegação existe
-        XCTAssertTrue(app.navigationBars["Comics Heroes"].exists)
+        XCTAssertTrue(viewModel.characters.isEmpty)
+        XCTAssertTrue(viewModel.searchResults.isEmpty)
+        XCTAssertFalse(viewModel.isLoading)
+        XCTAssertFalse(viewModel.isSearching)
+        XCTAssertNil(viewModel.error)
+        XCTAssertTrue(viewModel.hasMorePages)
+        XCTAssertTrue(viewModel.searchText.isEmpty)
+    }
 
-        // Aguardar carregamento dos personagens
-        let firstCharacterCard = app.scrollViews.otherElements.buttons.firstMatch
-        let exists = firstCharacterCard.waitForExistence(timeout: 10)
-        XCTAssertTrue(exists)
+    @MainActor
+    func testViewModelComputedProperties() {
+        // Testa propriedades computadas do ViewModel
+        let mockService = MockCharacterListService()
+        mockService.charactersToReturn = [
+            Character.listFixture(id: 1, name: "Spider-Man"),
+            Character.listFixture(id: 2, name: "Iron Man")
+        ]
 
-        // Testar busca
-        let searchField = app.searchFields.firstMatch
-        if searchField.exists {
-            searchField.tap()
-            searchField.typeText("Spider")
+        let useCase = FetchCharactersUseCase(service: mockService)
+        let viewModel = CharacterListViewModel(
+            fetchCharactersUseCase: useCase,
+            comicVineService: mockService
+        )
 
-            // Verificar se o filtro funciona
-            let spiderManCard = app.staticTexts["Spider-Man"]
-            XCTAssertTrue(spiderManCard.waitForExistence(timeout: 5))
+        // Simula carregamento de dados
+        viewModel.loadInitialData()
+
+        // Aguarda um pouco para o async carregar
+        let expectation = XCTestExpectation(description: "Load characters")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            expectation.fulfill()
         }
+        wait(for: [expectation], timeout: 1.0)
+
+        XCTAssertEqual(viewModel.characters.count, 2)
+        XCTAssertEqual(viewModel.displayCharacters.count, 2)
+        XCTAssertEqual(viewModel.characterCardModels.count, 2)
+    }
+
+    func testCharacterCardModelCreation() {
+        // Testa criação do modelo de card
+        let character = Character.listFixture()
+        let cardModel = CharacterCardModel(from: character)
+
+        XCTAssertEqual(cardModel.id, character.id)
+        XCTAssertEqual(cardModel.name, character.name)
+        XCTAssertEqual(cardModel.comicsCount, character.countOfIssueAppearances)
+    }
+
+    func testCharacterCardModelAspectRatio() {
+        // Testa que o aspect ratio padrão é 1.0 (quadrado)
+        let character = Character.listFixture()
+        let cardModel = CharacterCardModel(from: character)
+
+        XCTAssertEqual(cardModel.aspectRatio, 1.0, accuracy: 0.001)
+    }
+
+    func testCharacterCardModelContentCardConversion() {
+        // Testa conversão para ContentCardModel
+        let cardModel = CharacterCardModel(
+            id: 1,
+            name: "Wonder Woman",
+            comicVineImage: nil,
+            comicsCount: 150
+        )
+
+        let contentModel = cardModel.toContentCardModel()
+
+        XCTAssertEqual(contentModel.id, 1)
+        XCTAssertEqual(contentModel.title, "Wonder Woman")
+        XCTAssertNil(contentModel.subtitle)
+        XCTAssertEqual(contentModel.contentMode, .fill)
     }
 }

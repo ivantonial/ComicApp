@@ -37,11 +37,12 @@ public struct ComicVineAsyncImageComponent: View {
     @State private var hasError = false
     @State private var retryCount = 0
     @State private var autoRetryAttempts = 0
+    @State private var retryTask: Task<Void, Never>?
     @ObservedObject private var themeManager = ThemeManager.shared
 
     // Configuração de retry
     private let maxAutoRetries = 3
-    private let retryDelay: TimeInterval = 1.0
+    private let retryDelayNanoseconds: UInt64 = 1_500_000_000 // 1.5 segundos
 
     // MARK: - URL selection
     private var imageURL: URL? {
@@ -151,6 +152,9 @@ public struct ComicVineAsyncImageComponent: View {
                     .clipped()
                     .cornerRadius(cornerRadius)
                     .onAppear {
+                        // Cancela qualquer retry pendente ao carregar com sucesso
+                        retryTask?.cancel()
+                        retryTask = nil
                         isImageLoaded = true
                         hasError = false
                         autoRetryAttempts = 0
@@ -178,19 +182,38 @@ public struct ComicVineAsyncImageComponent: View {
             height: fixedSize?.height
         )
         .id("\(comicVineImage?.originalUrl ?? "")-\(retryCount)")
+        .onDisappear {
+            // Isso evita re-renders desnecessários e travamento do scroll
+            retryTask?.cancel()
+            retryTask = nil
+        }
     }
 
     // MARK: - Retry Logic
     private func scheduleAutoRetry() {
         guard autoRetryAttempts < maxAutoRetries else { return }
+        guard retryTask == nil else { return } // Evita múltiplas tasks
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + retryDelay) {
-            autoRetryAttempts += 1
-            retryCount += 1
+        retryTask = Task { @MainActor in
+            do {
+                try await Task.sleep(nanoseconds: retryDelayNanoseconds)
+
+                // Verifica se a task não foi cancelada
+                guard !Task.isCancelled else { return }
+
+                autoRetryAttempts += 1
+                retryCount += 1
+                retryTask = nil
+            } catch {
+                // Task foi cancelada, não faz nada
+                retryTask = nil
+            }
         }
     }
 
     private func performManualRetry() {
+        retryTask?.cancel()
+        retryTask = nil
         autoRetryAttempts = 0
         retryCount += 1
     }

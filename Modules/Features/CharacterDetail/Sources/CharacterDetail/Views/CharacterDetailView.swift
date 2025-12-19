@@ -18,6 +18,7 @@ public struct CharacterDetailView: View {
 
     // Debug tracking
     @State private var appearCount = 0
+    @State private var hasLoadedOnce = false
 
     public init(
         viewModel: CharacterDetailViewModel,
@@ -29,6 +30,52 @@ public struct CharacterDetailView: View {
     }
 
     public var body: some View {
+        ZStack {
+            // CORREÇÃO: Mostrar loading APENAS quando está carregando pela primeira vez
+            if viewModel.isLoading && !hasLoadedOnce {
+                FullScreenLoadingComponent(
+                    logoImage: "Loading", // Use o nome correto da imagem
+                    loadingText: "Loading Details",
+                    onBack: {
+                        print("🔙 Cancelling loading and going back")
+                        viewModel.cancelLoading()
+                        dismiss()
+                    }
+                )
+                .transition(.opacity)
+            } else {
+                // Conteúdo principal - só mostra após o primeiro loading
+                mainContent
+            }
+        }
+        .navigationBarHidden(true)
+        .onAppear {
+            appearCount += 1
+            print("🟩 CharacterDetailView.onAppear - Count: \(appearCount)")
+
+            // Só carrega na primeira vez que aparecer
+            if appearCount == 1 {
+                viewModel.loadCharacterDetails()
+            }
+        }
+        .onDisappear {
+            print("🟥 CharacterDetailView.onDisappear")
+            viewModel.cancelLoading()
+        }
+        // IMPORTANTE: Observar mudanças no isLoading
+        .onChange(of: viewModel.isLoading) { newValue in
+            print("📊 isLoading changed to: \(newValue)")
+            // Quando terminar de carregar pela primeira vez, marcar como carregado
+            if !newValue && !hasLoadedOnce {
+                withAnimation {
+                    hasLoadedOnce = true
+                }
+            }
+        }
+    }
+
+    // MARK: - Main Content
+    private var mainContent: some View {
         ZStack {
             themeManager.currentTheme.primaryBackground.ignoresSafeArea()
 
@@ -44,7 +91,7 @@ public struct CharacterDetailView: View {
             }
             .ignoresSafeArea(edges: .top)
 
-            // Navigation Bar Overlay
+            // Navigation Bar Overlay (sempre visível no conteúdo principal)
             CharacterDetailNavigationBarView(
                 isFavorite: viewModel.isFavorite,
                 onBack: {
@@ -57,53 +104,15 @@ public struct CharacterDetailView: View {
                 }
             )
         }
-        .navigationBarHidden(true)
-        .onAppear {
-            appearCount += 1
-            print("🟩 CharacterDetailView.onAppear - Count: \(appearCount)")
-
-            // Só carrega na primeira vez que aparecer
-            if appearCount == 1 {
-                viewModel.loadCharacterDetails()
-            }
-        }
-        .onDisappear {
-            print("🟥 CharacterDetailView.onDisappear")
-        }
     }
 
+    // MARK: - Content Section
     private var contentSection: some View {
         VStack(alignment: .leading, spacing: 20) {
-            // Character Name
-            VStack(alignment: .leading, spacing: 4) {
-                Text(viewModel.detailModel.character.name)
-                    .font(.system(size: 34, weight: .bold))
-                    .foregroundColor(themeManager.currentTheme.primaryText)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                // Real Name (se disponível)
-                if let realName = viewModel.detailModel.character.realName,
-                   !realName.isEmpty {
-                    Text("Real Name: \(realName)")
-                        .font(.system(size: 14))
-                        .foregroundColor(themeManager.currentTheme.secondaryText)
-                }
-
-                // Publisher (se disponível)
-                if let publisher = viewModel.detailModel.character.publisher?.name {
-                    HStack(spacing: 4) {
-                        Image(systemName: "building.2.fill")
-                            .font(.system(size: 12))
-                        Text(publisher)
-                            .font(.system(size: 14, weight: .medium))
-                    }
-                    .foregroundColor(themeManager.currentTheme.primaryAccent.opacity(0.8))
-                    .padding(.top, 4)
-                }
-            }
-            .onAppear {
-                print("🔍 Displaying character: \(viewModel.detailModel.character.name)")
-            }
+            // Character Info Section (Nome, Real Name, Publisher)
+            CharacterDetailInfoSectionView(
+                character: viewModel.detailModel.character
+            )
 
             // Description com deck e description HTML
             CharacterDetailDescriptionView(
@@ -117,8 +126,56 @@ public struct CharacterDetailView: View {
                 stats: viewModel.detailModel.stats
             )
 
-            // Additional Info (se disponível após carregar detalhes)
-            additionalInfoSection
+            // TEAMS Section - Só mostra se tiver dados
+            if let teams = viewModel.detailModel.character.teams, !teams.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("TEAMS")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(themeManager.currentTheme.primaryAccent)
+                        .tracking(2)
+
+                    ForEach(teams.prefix(3), id: \.id) { team in
+                        HStack {
+                            Image(systemName: "person.3.fill")
+                                .font(.system(size: 12))
+                                .foregroundColor(themeManager.currentTheme.warningAccent)
+                            Text(team.name)
+                                .font(.system(size: 14))
+                                .foregroundColor(themeManager.currentTheme.primaryText)
+                        }
+                    }
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+                .animation(.easeInOut(duration: 0.3), value: teams.count)
+            }
+
+            // POWERS Section - Só mostra se tiver dados
+            if let powers = viewModel.detailModel.character.powers, !powers.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("POWERS")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(themeManager.currentTheme.primaryAccent)
+                        .tracking(2)
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(powers, id: \.id) { power in
+                                Text(power.name)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(themeManager.currentTheme.primaryBackground)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(
+                                        Capsule()
+                                            .fill(themeManager.currentTheme.warningAccent)
+                                    )
+                            }
+                        }
+                    }
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+                .animation(.easeInOut(duration: 0.3), value: powers.count)
+            }
 
             // Actions
             CharacterDetailActionsView(
@@ -142,57 +199,5 @@ public struct CharacterDetailView: View {
                 .fill(themeManager.currentTheme.cardBackground)
                 .shadow(color: themeManager.currentTheme.primaryAccent.opacity(0.3), radius: 20, x: 0, y: -10)
         )
-    }
-
-    @ViewBuilder
-    private var additionalInfoSection: some View {
-        let character = viewModel.detailModel.character
-
-        // Teams
-        if let teams = character.teams, !teams.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("TEAMS")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(themeManager.currentTheme.primaryAccent)
-                    .tracking(2)
-
-                ForEach(teams.prefix(3), id: \.id) { team in
-                    HStack {
-                        Image(systemName: "person.3.fill")
-                            .font(.system(size: 12))
-                            .foregroundColor(themeManager.currentTheme.warningAccent)
-                        Text(team.name)
-                            .font(.system(size: 14))
-                            .foregroundColor(themeManager.currentTheme.primaryText)
-                    }
-                }
-            }
-        }
-
-        // Powers
-        if let powers = character.powers, !powers.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("POWERS")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(themeManager.currentTheme.primaryAccent)
-                    .tracking(2)
-
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(powers, id: \.id) { power in
-                            Text(power.name)
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(themeManager.currentTheme.primaryBackground)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(
-                                    Capsule()
-                                        .fill(themeManager.currentTheme.warningAccent)
-                                )
-                        }
-                    }
-                }
-            }
-        }
     }
 }

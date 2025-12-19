@@ -27,11 +27,16 @@ let package = Package(
             dependencies: [
                 "Core",
                 "ComicVineAPI"
-            ]
+            ],
+            path: "Sources/Cache"
         ),
         .testTarget(
             name: "CacheTests",
-            dependencies: ["Cache"]
+            dependencies: [
+                "Cache",
+                "ComicVineAPI"
+            ],
+            path: "Tests/CacheTests"
         ),
     ]
 )
