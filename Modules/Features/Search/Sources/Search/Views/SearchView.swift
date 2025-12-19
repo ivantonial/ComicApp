@@ -46,18 +46,26 @@ public struct SearchView: View {
                 // Filter Pills - Sem transição, sempre no mesmo lugar
                 if viewModel.hasResults {
                     filterSection
-                        .animation(nil, value: viewModel.searchType) // Desabilita animação na mudança de tipo
+                        .animation(nil, value: viewModel.searchType)
                 }
 
                 // Main Content
                 contentView
             }
         }
+        .simultaneousGesture(
+            TapGesture()
+                .onEnded { _ in
+                    dismissKeyboard()
+                }
+        )
         .navigationTitle("Search")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            isSearchFieldFocused = true
-        }
+    }
+
+    // MARK: - Dismiss Keyboard
+    private func dismissKeyboard() {
+        isSearchFieldFocused = false
     }
 
     // MARK: - Search Type Selector
@@ -65,6 +73,7 @@ public struct SearchView: View {
         HStack(spacing: 0) {
             ForEach(SearchType.allCases, id: \.self) { type in
                 Button(action: {
+                    dismissKeyboard()
                     withAnimation(.easeInOut(duration: 0.3)) {
                         viewModel.switchSearchType(type)
                     }
@@ -113,7 +122,7 @@ public struct SearchView: View {
                     .submitLabel(.search)
                     .focused($isSearchFieldFocused)
                     .onSubmit {
-                        isSearchFieldFocused = false
+                        dismissKeyboard()
                         viewModel.search()
                     }
 
@@ -151,7 +160,7 @@ public struct SearchView: View {
             HStack(spacing: 10) {
                 ForEach(Array(viewModel.suggestions.enumerated()), id: \.offset) { _, suggestion in
                     Button(action: {
-                        isSearchFieldFocused = false
+                        dismissKeyboard()
                         viewModel.selectSuggestion(suggestion)
                     }) {
                         Text(suggestion)
@@ -171,7 +180,7 @@ public struct SearchView: View {
         }
     }
 
-    // MARK: - Filter Section (CORRIGIDO - sem transições)
+    // MARK: - Filter Section
     private var filterSection: some View {
         VStack(spacing: 10) {
             ScrollView(.horizontal, showsIndicators: false) {
@@ -182,7 +191,7 @@ public struct SearchView: View {
                             icon: filter.icon,
                             isSelected: viewModel.selectedFilter == filter,
                             action: {
-                                // Animação apenas para a seleção do filtro, não para a entrada
+                                dismissKeyboard()
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     viewModel.updateFilter(filter)
                                 }
@@ -195,7 +204,7 @@ public struct SearchView: View {
         }
         .padding(.vertical, 5)
         .background(themeManager.currentTheme.primaryBackground)
-        .id("filterSection_\(viewModel.searchType)") // ID único por tipo para forçar recriação sem animação
+        .id("filterSection_\(viewModel.searchType)")
     }
 
     // MARK: - Content View
@@ -205,7 +214,6 @@ public struct SearchView: View {
             loadingView
                 .transition(.opacity)
         } else if viewModel.hasResults {
-            // Container estável para resultados
             GeometryReader { geometry in
                 Group {
                     switch viewModel.searchType {
@@ -284,6 +292,7 @@ public struct SearchView: View {
                             Spacer()
 
                             Button("Clear") {
+                                dismissKeyboard()
                                 viewModel.clearRecentSearches()
                             }
                             .font(.caption)
@@ -306,6 +315,7 @@ public struct SearchView: View {
                             .background(themeManager.currentTheme.secondaryBackground)
                             .cornerRadius(8)
                             .onTapGesture {
+                                dismissKeyboard()
                                 viewModel.searchText = search
                                 viewModel.search()
                             }
@@ -319,6 +329,7 @@ public struct SearchView: View {
             }
             .padding(.vertical)
         }
+        .scrollDismissesKeyboard(.immediately)
     }
 
     // MARK: - Suggested Characters
@@ -350,6 +361,7 @@ public struct SearchView: View {
                         }
                         .frame(width: 70)
                         .onTapGesture {
+                            dismissKeyboard()
                             viewModel.searchText = name
                             viewModel.search()
                         }
@@ -367,6 +379,7 @@ public struct SearchView: View {
                 ForEach(viewModel.filteredCharacters) { character in
                     SearchResultCard(character: character)
                         .onTapGesture {
+                            dismissKeyboard()
                             onCharacterSelected?(character)
                         }
                 }
@@ -374,6 +387,7 @@ public struct SearchView: View {
             .padding(.horizontal)
             .padding(.vertical, 10)
         }
+        .scrollDismissesKeyboard(.immediately)
     }
 
     // MARK: - Comic Results
@@ -387,6 +401,7 @@ public struct SearchView: View {
                     ComicCardView(
                         model: ComicCardModel(from: comic),
                         onTap: {
+                            dismissKeyboard()
                             onComicSelected?(comic)
                         }
                     )
@@ -395,6 +410,7 @@ public struct SearchView: View {
             .padding(.horizontal)
             .padding(.vertical, 10)
         }
+        .scrollDismissesKeyboard(.immediately)
     }
 }
 
