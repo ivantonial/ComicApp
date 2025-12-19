@@ -93,8 +93,9 @@ public struct FavoriteCardView: View {
             id: character.id,
             title: character.name,
             subtitle: nil,
-            // ComicVine: melhor URL disponível
-            imageURL: image.bestQualityUrl,
+            // Isso permite que ContentCardComponent use ComicVineAsyncImageComponent
+            // que possui retry automático (até 3 tentativas antes de mostrar erro)
+            comicVineImage: image,
             // No DesignSystem atual o aspectRatio está como CGFloat (ex.: 1.0)
             aspectRatio: 1.0,
             badge: ContentCardModel.BadgeModel(
