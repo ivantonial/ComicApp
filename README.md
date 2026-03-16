@@ -49,7 +49,7 @@ O projeto utiliza um arquivo `.xcconfig` para armazenar a chave da API de forma 
 1. Clone o repositório:
 
    ```bash
-   git clone https://github.com/SEU_USUARIO/ComicApp.git
+   git clone https://github.com/ivantonial/ComicApp.git
    cd ComicApp
    ```
 
