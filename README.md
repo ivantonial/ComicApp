@@ -4,6 +4,7 @@ Aplicativo iOS que consome a [ComicVine API](https://comicvine.gamespot.com/api/
 
 ## Índice
 
+- [Screenshots](#screenshots)
 - [Requisitos](#requisitos)
 - [Configuração da API Key](#configuração-da-api-key)
 - [Como Rodar o Projeto](#como-rodar-o-projeto)
@@ -12,6 +13,20 @@ Aplicativo iOS que consome a [ComicVine API](https://comicvine.gamespot.com/api/
 - [Funcionalidades](#funcionalidades)
 - [Testes](#testes)
 - [Dependências Externas](#dependências-externas)
+
+## Screenshots
+
+<p align="center">
+  <img src="screenshots/charactersScreen.jpeg" width="200" alt="Characters">
+  <img src="screenshots/searchCharactersScreen.jpeg" width="200" alt="Search Characters">
+  <img src="screenshots/searchCharactersScreenV2.jpeg" width="200" alt="Search Characters V2">
+</p>
+
+<p align="center">
+  <img src="screenshots/searchComicsScreen.jpeg" width="200" alt="Search Comics">
+  <img src="screenshots/myFavoritesScreen.jpeg" width="200" alt="Favorites">
+  <img src="screenshots/configScreen.jpeg" width="200" alt="Settings">
+</p>
 
 ## Requisitos
 
